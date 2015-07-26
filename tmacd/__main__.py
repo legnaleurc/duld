@@ -145,7 +145,12 @@ def split_all(path):
 
 @gen.coroutine
 def upload(torrent_root, root_items):
-    logger = logging.getLogger('acd')
+    logger = logging.getLogger('tmacd')
+
+    # sync local cache first
+    cmd = ['acdcli', '--verbose', 'sync']
+    # call the external process
+    exit_code = yield call_acdcli(cmd)
 
     cmd = ['acdcli', '--verbose', 'upload', '--deduplicate']
     # exclude pattern
@@ -157,9 +162,17 @@ def upload(torrent_root, root_items):
     # upload destination
     cmd.append(OPTS['upload_to'])
 
-    logging.getLogger('tmacd').info('acdcli command: {0}'.format(cmd))
+    logger.info('acdcli command: {0}'.format(cmd))
 
     # call the external process
+    exit_code = yield call_acdcli(cmd)
+
+    return exit_code
+
+
+@gen.coroutine
+def call_acdcli(cmd):
+    logger = logging.getLogger('acd')
     p = process.Subprocess(cmd, stdout=subprocess.DEVNULL,
                            stderr=process.Subprocess.STREAM)
     # tee log
