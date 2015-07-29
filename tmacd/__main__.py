@@ -21,6 +21,9 @@ class RootHandler(web.RequestHandler):
         torrent_id = self.get_argument('torrent_id')
         torrent_name = self.get_argument('torrent_name')
 
+        if not all((torrent_root, torrent_id, torrent_name)):
+            return
+
         loop = ioloop.IOLoop.current()
         loop.add_callback(process_torrent, torrent_root, torrent_id, torrent_name)
 
