@@ -19,8 +19,10 @@ class RootHandler(web.RequestHandler):
         # the directory that contains downloaded files
         torrent_root = self.get_argument('torrent_root')
         torrent_id = self.get_argument('torrent_id')
+        torrent_name = self.get_argument('torrent_name')
+
         loop = ioloop.IOLoop.current()
-        loop.add_callback(process_torrent, torrent_root, torrent_id)
+        loop.add_callback(process_torrent, torrent_root, torrent_id, torrent_name)
 
 
 def main(args=None):
@@ -88,15 +90,25 @@ def parse_config(path):
 
 
 @gen.coroutine
-def process_torrent(torrent_root, torrent_id):
+def process_torrent(torrent_root, torrent_id, torrent_name):
     logger = logging.getLogger('tmacd')
+
+    logger.info('processing {0}'.format(torrent_name))
 
     root_items = get_root_items(torrent_id)
     logger.info('root times: {0}'.format(root_items))
 
+    if not root_items:
+        logger.warning('no item to upload?')
+        return
+
     logger.info('upload')
     # upload files to Amazon Cloud Drive
-    yield upload(torrent_root, root_items)
+    try:
+        yield upload(torrent_root, root_items)
+    except Exception as e:
+        logger.exception('upload failed, wont remove torrent')
+        return
 
     logger.info('remove torrent')
     # remove the task from Transmission first
