@@ -167,7 +167,7 @@ def upload(torrent_root, root_items):
     # call the external process
     exit_code = yield call_acdcli(cmd)
 
-    cmd = ['acdcli', '--verbose', 'upload']
+    cmd = ['acdcli', '--verbose', 'upload', '--max-retries', '4']
     # exclude pattern
     exclude = OPTS['exclude']
     for p in exclude:
