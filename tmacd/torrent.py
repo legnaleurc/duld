@@ -14,25 +14,25 @@ async def process_torrent(torrent_id):
         WARNING('tmacd') << 'no such torrent id {0}'.format(torrent_id)
         return
     torrent_name = torrent.name
-    INFO('tmacd') << 'processing {0}'.format(torrent_name)
+    INFO('tmacd') << '{0}: processing'.format(torrent_name)
 
     root_items = get_root_items(torrent)
     if not root_items:
-        WARNING('tmacd') << 'no item to upload?'
+        WARNING('tmacd') << '{0}: no item to upload?'.format(torrent_name)
         return
-    DEBUG('tmacd') << 'root times: {0}'.format(root_items)
+    DEBUG('tmacd') << '{0}: {1}'.format(torrent_name, root_items)
 
-    INFO('tmacd') << 'begin uploading'
+    INFO('tmacd') << '{0}: begin uploading'.format(torrent_name)
     torrent_root = torrent.downloadDir
     # upload files to Amazon Cloud Drive
     try:
         await acd.upload(torrent_root, root_items)
     except Exception as e:
-        EXCEPTION('tmacd') << 'upload {0} failed'.format(torrent_name)
+        EXCEPTION('tmacd') << '{0}: upload failed'.format(torrent_name)
         INFO('tmacd') << 'retry url: /torrents/{0}'.format(torrent_id)
         return
 
-    INFO('tmacd') << 'remove torrent'
+    INFO('tmacd') << '{0}: remove torrent'.format(torrent_name)
     # remove the task from Transmission first
     remove_torrent(torrent_client, torrent_id)
 
