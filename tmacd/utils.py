@@ -23,7 +23,7 @@ def main(args=None):
     torrents = application.router.add_resource('/torrents/{id}')
     torrents.add_route('PUT', handlers.TorrentsHandler)
 
-    web.run_app(application)
+    web.run_app(application, host='127.0.0.1', port=settings['port'])
 
     return 0
 
