@@ -1,3 +1,5 @@
+import transmissionrpc
+
 from . import acd
 from . import settings
 from .log import DEBUG, INFO, WARNING, EXCEPTION
