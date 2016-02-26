@@ -5,9 +5,10 @@ import logging.handlers
 from . import settings
 
 
-def Logger(object):
+class Logger(object):
 
     def __init__(self, name, level):
+        super().__init__()
         self._logger = logging.getLogger(name)
         self._level = level
         self._parts = []
