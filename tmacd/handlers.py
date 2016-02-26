@@ -1,3 +1,5 @@
+import asyncio
+
 from aiohttp import web
 
 from .torrent import process_torrent
