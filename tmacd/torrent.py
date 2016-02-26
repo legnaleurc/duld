@@ -29,7 +29,7 @@ async def process_torrent(torrent_id):
         await acd.upload(torrent_root, root_items)
     except Exception as e:
         EXCEPTION('tmacd') << 'upload {0} failed'.format(torrent_name)
-        INFO('tmacd') << 'retry url: /torrents/{0}'.format(torrend_id)
+        INFO('tmacd') << 'retry url: /torrents/{0}'.format(torrent_id)
         return
 
     INFO('tmacd') << 'remove torrent'
