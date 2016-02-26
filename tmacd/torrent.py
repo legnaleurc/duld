@@ -1,3 +1,5 @@
+import os
+
 import transmissionrpc
 
 from . import acd
