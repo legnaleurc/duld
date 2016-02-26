@@ -27,11 +27,21 @@ def setup_logger():
     formatter = logging.Formatter('{asctime}|{levelname:_<8}|{message}',
                                   style='{')
     handler = create_handler(settings['log_path'], formatter)
-    logger = create_logger('tmacd')
+    logger = create_logger('asyncio')
+    logger.addHandler(handler)
+    logger = create_logger('aiohttp.access')
+    logger.addHandler(handler)
+    logger = create_logger('aiohttp.client')
+    logger.addHandler(handler)
+    logger = create_logger('aiohttp.internal')
+    logger.addHandler(handler)
+    logger = create_logger('aiohttp.server')
     logger.addHandler(handler)
     logger = create_logger('aiohttp.web')
     logger.addHandler(handler)
-    logger = create_logger('asyncio')
+    logger = create_logger('aiohttp.websocket')
+    logger.addHandler(handler)
+    logger = create_logger('tmacd')
     logger.addHandler(handler)
 
     # log for acdcli
