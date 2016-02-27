@@ -1,4 +1,3 @@
-import asyncio
 import sys
 
 from .utils import main
