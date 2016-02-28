@@ -26,3 +26,13 @@ Look `tmacd.example.yaml` and create your own configuration.
 ```shell
 python3 -m tmacd --settings=tmacd.yaml
 ```
+
+## RESTful API
+
+### POST /torrents
+
+Upload all completed torrents.
+
+### PUT /torrents/{ID}
+
+Upload torrent by ID.
