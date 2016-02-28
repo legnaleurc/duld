@@ -37,6 +37,12 @@ async def process_torrent(torrent_id):
     remove_torrent(torrent_client, torrent_id)
 
 
+def get_completed():
+    torrent_client = connect_transmission()
+    completed = filter(lambda _: _.leftUntilDone == 0, torrent_client.get_torrents())
+    return list(completed)
+
+
 def get_root_items(torrent):
     files = torrent.files()
     common = set()
