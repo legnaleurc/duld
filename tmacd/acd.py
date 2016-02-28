@@ -7,12 +7,16 @@ from . import settings
 from .log import DEBUG, INFO
 
 
+SYNC_LOCK = asyncio.Lock()
+
+
 async def upload(torrent_root, root_items):
     # sync local cache first
     # TODO global lock: this opration is not reentrant
     cmd = ['acdcli', '--verbose', 'sync']
     # call the external process
-    exit_code = await call_acdcli(cmd)
+    with (await SYNC_LOCK):
+        exit_code = await call_acdcli(cmd)
 
     cmd = ['acdcli', '--verbose', 'upload', '--max-retries', '4']
     # exclude pattern
