@@ -33,6 +33,11 @@ python3 -m tmacd --settings=tmacd.yaml
 
 Upload all completed torrents.
 
+200 - a list of torrent ID, in JSON
+
 ### PUT /torrents/{ID}
 
 Upload torrent by ID.
+
+204 - success
+400 - invalid torrent ID
