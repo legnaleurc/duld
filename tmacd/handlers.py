@@ -9,6 +9,7 @@ class TorrentsHandler(web.View):
 
     async def post(self):
         torrent_ids = torrent.get_completed()
+        loop = asyncio.get_event_loop()
         for torrent_id in torrent_ids:
             asyncio.ensure_future(torrent.process_torrent(torrent_id), loop=loop)
         return web.json_response(torrent_ids)
