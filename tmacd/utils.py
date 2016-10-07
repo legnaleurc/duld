@@ -13,8 +13,8 @@ def main(args):
 
     main_loop = ti.IOLoop.instance()
     application = tw.Application([
-        (r'/torrents', api.TorrentsHandler),
-        (r'/torrents/(\d+)', api.TorrentsHandler),
+        (r'^/torrents$', api.TorrentsHandler),
+        (r'^/torrents/(\d+)$', api.TorrentsHandler),
     ])
     server = ths.HTTPServer(application)
     with create_sockets([settings['port']]) as sockets:

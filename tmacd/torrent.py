@@ -1,10 +1,10 @@
 import os
 
 import transmissionrpc
+from wcpan.logger import DEBUG, INFO, WARNING, EXCEPTION
 
 from . import acd
 from . import settings
-from .log import DEBUG, INFO, WARNING, EXCEPTION
 
 
 async def process_torrent(torrent_id):

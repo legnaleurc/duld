@@ -1,24 +1,22 @@
-import asyncio
-
-from aiohttp import web
+from tornado import web as tw, ioloop as ti
 
 from . import torrent
 
 
-class TorrentsHandler(web.View):
+class TorrentsHandler(tw.RequestHandler):
 
-    async def post(self):
+    def post(self):
         torrent_ids = torrent.get_completed()
-        loop = asyncio.get_event_loop()
+        loop = ti.IOLoop.current()
         for torrent_id in torrent_ids:
-            asyncio.ensure_future(torrent.process_torrent(torrent_id), loop=loop)
-        return web.json_response(torrent_ids)
+            loop.add_callback(torrent.process_torrent, torrent_id)
+        self.write(torrent_ids)
 
-    async def put(self):
-        torrent_id = self.request.match_info['id']
+    def put(self, torrent_id):
         if not torrent_id:
-            return web.Response(status=400)
+            self.set_status(400)
+            return
 
-        loop = asyncio.get_event_loop()
-        asyncio.ensure_future(torrent.process_torrent(torrent_id), loop=loop)
-        return web.Response(status=204)
+        loop = ti.IOLoop.current()
+        loop.add_callback(torrent.process_torrent, torrent_id)
+        self.set_status(204)
