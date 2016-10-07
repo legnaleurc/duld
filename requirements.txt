@@ -1,4 +1,5 @@
 PyYAML
-acdcli >= 0.3.0a2
-aiohttp
+git+https://github.com/yadayada/acd_cli.git#egg=acdcli
+tornado
 transmissionrpc
+wcpan.logger
