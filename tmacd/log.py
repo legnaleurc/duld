@@ -2,33 +2,14 @@ import datetime
 import logging
 import logging.handlers
 
+from wcpan.logger import setup
+
 from . import settings
-
-
-class Logger(object):
-
-    def __init__(self, name, level):
-        super().__init__()
-        self._logger = logging.getLogger(name)
-        self._level = level
-        self._parts = []
-
-    def __lshift__(self, part):
-        self._parts.append(part)
-        return self
-
-    def __del__(self):
-        msg = ' '.join(self._parts)
-        log = getattr(self._logger, self._level)
-        log(msg)
 
 
 def setup_logger():
     # log for daemon
-    formatter = logging.Formatter('{asctime}|{levelname:_<8}|{message}',
-                                  style='{')
-    handler = create_handler(settings['log_path'], formatter)
-    bind_to_logger(handler, (
+    setup(settings['log_path'], (
         'asyncio',
         'aiohttp.access',
         'aiohttp.client',
@@ -65,27 +46,3 @@ def bind_to_logger(handler, names):
     for name in names:
         logger = create_logger(name)
         logger.addHandler(handler)
-
-
-def DEBUG(name):
-    return Logger(name, 'debug')
-
-
-def INFO(name):
-    return Logger(name, 'info')
-
-
-def WARNING(name):
-    return Logger(name, 'warning')
-
-
-def ERROR(name):
-    return Logger(name, 'error')
-
-
-def CRITICAL(name):
-    return Logger(name, 'critical')
-
-
-def EXCEPTION(name):
-    return Logger(name, 'exception')

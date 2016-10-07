@@ -2,4 +2,5 @@ PyYAML
 git+https://github.com/yadayada/acd_cli.git#egg=acdcli
 tornado
 transmissionrpc
+wcpan.listen
 wcpan.logger

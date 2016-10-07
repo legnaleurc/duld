@@ -1,31 +1,26 @@
 import argparse
-import asyncio
-import sys
 
-from aiohttp import web
+from tornado import web as tw, ioloop as ti, httpserver as ths
+from wcpan.listen import create_sockets
 
-from . import handlers
-from . import log
-from . import settings
+from . import api, log, settings
 
 
-def main(args=None):
-    if not args:
-        args = sys.argv
-
+def main(args):
     args = parse_args(args)
     settings.reload(args.settings)
     log.setup_logger()
 
-    application = web.Application()
-    # TODO cleanup pending tasks
-
-    torrents = application.router.add_resource('/torrents/{id}')
-    torrents.add_route('PUT', handlers.TorrentsHandler)
-    torrents = application.router.add_resource('/torrents')
-    torrents.add_route('POST', handlers.TorrentsHandler)
-
-    web.run_app(application, host='127.0.0.1', port=settings['port'])
+    main_loop = ti.IOLoop.instance()
+    application = tw.Application([
+        (r'/torrents', api.TorrentsHandler),
+        (r'/torrents/(\d+)', api.TorrentsHandler),
+    ])
+    server = ths.HTTPServer(application)
+    with create_sockets([settings['port']]) as sockets:
+        server.add_sockets(sockets)
+        main_loop.start()
+        main_loop.close()
 
     return 0
 
