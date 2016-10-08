@@ -1,6 +1,7 @@
 import hashlib
 import os.path as op
 import pathlib
+import re
 
 from tornado import locks as tl
 from wcpan.acd import ACDController
@@ -123,7 +124,7 @@ def md5sum(path):
 
 
 def should_exclude(name):
-    for pattern in settings.exclude_pattern:
+    for pattern in settings['exclude_pattern']:
         if re.match(pattern, name, re.IGNORECASE):
             return True
     return False
