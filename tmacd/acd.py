@@ -92,7 +92,12 @@ class ACDUploader(object):
 
         if not child_node or not child_node.is_available:
             INFO('tmacd') << 'uploading' << remote_path
-            child_node = await self._acd.upload_file(node, str(local_path))
+            while True:
+                try:
+                    child_node = await self._acd.upload_file(node, str(local_path))
+                    break
+                except Exception as e:
+                    EXCEPTION('tmacd') << 'retry'
             remote_md5 = child_node.md5
             local_md5 = md5sum(local_path)
             if local_md5 != remote_md5:
