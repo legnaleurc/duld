@@ -8,7 +8,7 @@ from wcpan.logger import DEBUG, INFO, ERROR
 from . import settings
 
 
-class RootController(object):
+class ACDUploader(object):
 
     def __init__(self):
         self._acd = ACDController(op.expanduser('~/.cache/acd_cli'))

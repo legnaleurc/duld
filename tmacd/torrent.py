@@ -1,13 +1,12 @@
-import os
+import os.path as op
 
 import transmissionrpc
 from wcpan.logger import DEBUG, INFO, WARNING, EXCEPTION
 
-from . import acd
 from . import settings
 
 
-async def process_torrent(torrent_id):
+async def upload_torrent(uploader, torrent_id):
     torrent_client = connect_transmission()
     torrent = torrent_client.get_torrent(torrent_id)
     if not torrent:
@@ -26,7 +25,7 @@ async def process_torrent(torrent_id):
     torrent_root = torrent.downloadDir
     # upload files to Amazon Cloud Drive
     try:
-        await acd.upload(torrent_root, root_items)
+        await uploader.upload_torrent(torrent_root, root_items)
     except Exception as e:
         EXCEPTION('tmacd') << '{0}: upload failed'.format(torrent_name)
         INFO('tmacd') << 'retry url: /torrents/{0}'.format(torrent_id)
@@ -68,7 +67,7 @@ def split_all(path):
     '''
     allparts = []
     while True:
-        parts = os.path.split(path)
+        parts = op.split(path)
         if parts[0] == path:  # sentinel for absolute paths
             allparts.insert(0, parts[0])
             break
