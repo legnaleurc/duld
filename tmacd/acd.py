@@ -1,3 +1,4 @@
+import hashlib
 import os.path as op
 import pathlib
 
@@ -14,7 +15,10 @@ class ACDUploader(object):
         self._acd = ACDController(op.expanduser('~/.cache/acd_cli'))
         self._sync_lock = tl.Lock()
 
-    async def upload_torrent(self, remote_path, torrent_root, root_items)
+    def close(self):
+        self._acd.close()
+
+    async def upload_torrent(self, remote_path, torrent_root, root_items):
         async with self._sync_lock:
             ok = await self._acd.sync()
             if not ok:
@@ -45,7 +49,7 @@ class ACDUploader(object):
 
         # find or create remote directory
         child_node = await self._acd.get_child(node, dir_name)
-        if child_node.is_file:
+        if child_node and child_node.is_file:
             # is file
             path = await self._acd.resolve_path(child_node)
             ERROR('tmacd') << '(remote)' << path << 'is a file'
@@ -70,7 +74,7 @@ class ACDUploader(object):
 
     async def _upload_file(self, node, local_path):
         file_name = local_path.name
-        remote_path = await self._acd.resolve_path(node)
+        remote_path = await self._acd.get_path(node)
         remote_path = pathlib.Path(remote_path, file_name)
 
         child_node = await self._acd.get_child(node, file_name)
@@ -79,18 +83,31 @@ class ACDUploader(object):
                 ERROR('tmacd') << '(remote)' << remote_path << 'is a directory'
                 return False
             # check integrity
-            md5 = md5sum(local_path)
-            if md5 != child_node.md5:
-                ERROR('tmacd') << '(remote)' << remote_path << 'has a different md5'
+            local_md5 = md5sum(local_path)
+            remote_md5 = child_node.md5
+            if local_md5 != remote_md5:
+                ERROR('tmacd') << '(remote)' << remote_path << 'has a different md5 ({0}, {1})'.format(local_md5, remote_md5)
                 return False
             INFO('tmacd') << remote_path << 'already exists'
 
         if not child_node or not child_node.is_available:
             INFO('tmacd') << 'uploading' << remote_path
-            remote_md5 = self._acd.upload_file(node, str(local_path))
+            child_node = await self._acd.upload_file(node, str(local_path))
+            remote_md5 = child_node.md5
             local_md5 = md5sum(local_path)
             if local_md5 != remote_md5:
-                ERROR('tmacd') << '(remote)' << remote_path << 'has a different md5'
+                ERROR('tmacd') << '(remote)' << remote_path << 'has a different md5 ({0}, {1})'.format(local_md5, remote_md5)
                 return False
 
-        return False
+        return True
+
+
+def md5sum(path):
+    hasher = hashlib.md5()
+    with path.open('rb') as fin:
+        while True:
+            chunk = fin.read(65536)
+            if not chunk:
+                break
+            hasher.update(chunk)
+    return hasher.hexdigest()

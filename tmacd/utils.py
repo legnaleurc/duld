@@ -31,6 +31,7 @@ def main(args):
     with create_sockets([settings['port']]) as sockets:
         server.add_sockets(sockets)
         main_loop.start()
+        uploader.close()
         main_loop.close()
 
     return 0
