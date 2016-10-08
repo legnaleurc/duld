@@ -91,7 +91,7 @@ class RootController(object):
 
         if not child_node or not child_node.is_available:
             INFO('tmacd') << 'uploading' << remote_path
-            remote_md5 = self._acd.upload_file(local_path, node)
+            remote_md5 = self._acd.upload_file(node, str(local_path))
             local_md5 = md5sum(local_path)
             if local_md5 != remote_md5:
                 ERROR('tmacd') << '(remote)' << remote_path << 'has a different md5'
