@@ -38,6 +38,10 @@ class ACDUploader(object):
                 continue
 
     async def _upload(self, node, local_path):
+        if should_exclude(local_path.name):
+            INFO('tmacd') << 'excluded' << local_path
+            return True
+
         if local_path.is_dir():
             ok = await self._upload_directory(node, local_path)
         else:
@@ -116,3 +120,10 @@ def md5sum(path):
                 break
             hasher.update(chunk)
     return hasher.hexdigest()
+
+
+def should_exclude(name):
+    for pattern in settings.exclude_pattern:
+        if re.match(pattern, name, re.IGNORECASE):
+            return True
+    return False
