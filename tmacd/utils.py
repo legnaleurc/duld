@@ -2,20 +2,31 @@ import argparse
 
 from tornado import web as tw, ioloop as ti, httpserver as ths
 from wcpan.listen import create_sockets
+from wcpan.logger import setup as setup_logger
 
-from . import api, log, settings
+from . import api, acd, settings
 
 
 def main(args):
     args = parse_args(args)
     settings.reload(args.settings)
-    log.setup_logger()
+    setup_logger(settings['log_path'], (
+        'tornado.access',
+        'tornado.application',
+        'tornado.general',
+        'requests.packages.urllib3.connectionpool',
+        'wcpan.acd',
+        'wcpan.worker',
+        'tmacd',))
 
     main_loop = ti.IOLoop.instance()
+
+    uploader = acd.ACDUploader()
+
     application = tw.Application([
         (r'^/torrents$', api.TorrentsHandler),
         (r'^/torrents/(\d+)$', api.TorrentsHandler),
-    ])
+    ], uploader=uploader)
     server = ths.HTTPServer(application)
     with create_sockets([settings['port']]) as sockets:
         server.add_sockets(sockets)
