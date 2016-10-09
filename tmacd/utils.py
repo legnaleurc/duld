@@ -5,7 +5,7 @@ from tornado import web as tw, ioloop as ti, httpserver as ths
 from wcpan.listen import create_sockets
 from wcpan.logger import setup as setup_logger
 
-from . import api, acd, settings
+from . import api, acd, hah, settings
 
 
 def main(args):
@@ -23,6 +23,7 @@ def main(args):
     main_loop = ti.IOLoop.instance()
 
     uploader = acd.ACDUploader()
+    hah.open(settings['hah']['log_path'], settings['hah']['download_path'])
 
     application = tw.Application([
         (r'^/torrents$', api.TorrentsHandler),
@@ -30,7 +31,10 @@ def main(args):
     ], uploader=uploader)
     server = ths.HTTPServer(application)
 
-    signal.signal(signal.SIGINT, uploader.close)
+    def close():
+        hah.close()
+        uploader.close()
+    signal.signal(signal.SIGINT, close)
 
     with create_sockets([settings['port']]) as sockets:
         server.add_sockets(sockets)
