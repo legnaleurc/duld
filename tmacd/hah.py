@@ -54,9 +54,9 @@ class HaHEventHandler(PatternMatchingEventHandler):
 class HaHListener(object):
 
     def __init__(self, log_path, download_path, uploader):
-        handler = HaHEventHandler(log_path, download_path, uploader)
+        handler = HaHEventHandler(op.join(log_path, 'log_out'), download_path, uploader)
         self._observer = Observer()
-        self._observer.schedule(handler, op.basename(log_path))
+        self._observer.schedule(handler, log_path)
         self._observer.start()
 
     def close(self):
