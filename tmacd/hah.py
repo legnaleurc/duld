@@ -24,7 +24,7 @@ class HaHEventHandler(PatternMatchingEventHandler):
         self._lines = []
 
     def on_modified(self, event):
-        if op.getsize(log_path) < self._index:
+        if op.getsize(self._log_path) < self._index:
             self._index = 0
         with open(self._log_path, 'r') as fin:
             fin.seek(self._index, os.SEEK_SET)
