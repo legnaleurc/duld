@@ -19,6 +19,23 @@ class ACDUploader(object):
     def close(self):
         self._acd.close()
 
+    async def upload_path(self, remote_path, local_path):
+        async with self._sync_lock:
+            ok = await self._acd.sync()
+            if not ok:
+                return False
+
+        node = await self._acd.resolve_path(remote_path)
+        if not node:
+            ERROR('tmacd') << remote_path << 'not found'
+            return False
+
+        local_path = pathlib.Path(local_path)
+        ok = await self._upload(node, local_path)
+        if not ok:
+            ERROR('tmacd') << item << 'upload failed'
+        return ok
+
     async def upload_torrent(self, remote_path, torrent_root, root_items):
         async with self._sync_lock:
             ok = await self._acd.sync()
@@ -37,6 +54,8 @@ class ACDUploader(object):
             if not ok:
                 ERROR('tmacd') << item << 'upload failed'
                 continue
+
+        return True
 
     async def _upload(self, node, local_path):
         if should_exclude(local_path.name):

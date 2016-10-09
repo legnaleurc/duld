@@ -25,3 +25,12 @@ class TorrentsHandler(tw.RequestHandler):
         loop = ti.IOLoop.current()
         loop.add_callback(torrent.upload_torrent, uploader, torrent_id)
         self.set_status(204)
+
+
+class PathesHandler(tw.RequestHandler):
+
+    def put(self, path):
+        uploader = self.settings['uploader']
+        loop = ti.IOLoop.current()
+        loop.add_callback(uploader.upload_path, path)
+        self.set_status(204)
