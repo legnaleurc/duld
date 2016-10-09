@@ -23,7 +23,7 @@ def main(args):
     main_loop = ti.IOLoop.instance()
 
     uploader = acd.ACDUploader()
-    hah.open(settings['hah']['log_path'], settings['hah']['download_path'])
+    hah_listener = hah.HaHListener(settings['hah']['log_path'], settings['hah']['download_path'], uploader)
 
     application = tw.Application([
         (r'^/torrents$', api.TorrentsHandler),
@@ -32,7 +32,7 @@ def main(args):
     server = ths.HTTPServer(application)
 
     def close():
-        hah.close()
+        hah_listener.close()
         uploader.close()
     signal.signal(signal.SIGINT, close)
 
