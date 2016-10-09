@@ -47,7 +47,7 @@ class HaHEventHandler(PatternMatchingEventHandler):
                     self._lines.pop(0)
                     line += self._lines[0]
 
-            self._parse_line(line):
+            self._parse_line(line)
 
     def _parse_gid(self, line):
         m = re.match(r'.*\[debug\] GalleryDownloader: Parsed gid=(\d+)\n', line)
