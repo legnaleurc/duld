@@ -50,6 +50,7 @@ class HaHEventHandler(PatternMatchingEventHandler):
             self._parse_line(line)
 
     def _parse_gid(self, line):
+        DEBUG('tmacd') << 'parse_gid' << line
         m = re.match(r'.*\[debug\] GalleryDownloader: Parsed gid=(\d+)\n', line)
         if m:
             self._current_gid = m.group(1)
@@ -57,12 +58,14 @@ class HaHEventHandler(PatternMatchingEventHandler):
         self._lines.pop(0)
 
     def _parse_pre_title(self, line):
+        DEBUG('tmacd') << 'parse_gid' << line
         m = re.match(r'.*\[debug\] GalleryDownloader: Parsed title=(.+)\n', line)
         if m:
             self._parse_line = self._parse_post_title
         self._lines.pop(0)
 
     def _parse_post_title(self, line):
+        DEBUG('tmacd') << 'parse_gid' << line
         m = re.match(r'.*\[info\] GalleryDownloader: Finished download of gallery: (.+)\n', line)
         if m:
             name = m.group(1)
@@ -85,6 +88,7 @@ class HaHListener(object):
         self._observer.start()
 
     def close(self):
-        self._observer.stop()
-        self._observer.join()
-        self._observer = None
+        if self._observer:
+            self._observer.stop()
+            self._observer.join()
+            self._observer = None
