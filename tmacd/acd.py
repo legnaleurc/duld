@@ -103,6 +103,10 @@ class ACDUploader(object):
                     break
                 except Exception as e:
                     EXCEPTION('tmacd') << 'retry'
+                    async with self._sync_lock:
+                        ok = await self._acd.sync()
+                        if not ok:
+                            return False
             remote_md5 = child_node.md5
             local_md5 = md5sum(local_path)
             if local_md5 != remote_md5:
