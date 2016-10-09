@@ -1,6 +1,7 @@
 import os
 import os.path as op
 import re
+import shutil
 
 from tornado import ioloop as ti
 from watchdog.observers import Observer
@@ -50,7 +51,6 @@ class HaHEventHandler(PatternMatchingEventHandler):
             self._parse_line(line)
 
     def _parse_gid(self, line):
-        DEBUG('tmacd') << 'parse_gid' << line
         m = re.match(r'.*\[debug\] GalleryDownloader: Parsed gid=(\d+)\n', line)
         if m:
             self._current_gid = m.group(1)
@@ -58,25 +58,26 @@ class HaHEventHandler(PatternMatchingEventHandler):
         self._lines.pop(0)
 
     def _parse_pre_title(self, line):
-        DEBUG('tmacd') << 'parse_gid' << line
         m = re.match(r'.*\[debug\] GalleryDownloader: Parsed title=(.+)\n', line)
         if m:
             self._parse_line = self._parse_post_title
         self._lines.pop(0)
 
     def _parse_post_title(self, line):
-        DEBUG('tmacd') << 'parse_gid' << line
         m = re.match(r'.*\[info\] GalleryDownloader: Finished download of gallery: (.+)\n', line)
         if m:
             name = m.group(1)
             self._loop.add_callback(self._upload, '{0} [{1}]'.format(name, self._current_gid))
             self._current_gid = ''
+            self._parse_line = self._parse_gid
         self._lines.pop(0)
 
     async def _upload(self, name):
-        DEBUG('tmacd') << 'hah upload' << self._download_path << name
-        # await self._uploader.upload_torrent(settings['upload_to'], self._download_path, [name])
-        DEBUG('tmacd') << 'rm -rf' << op.join(self._download_path, name)
+        path = op.join(self._download_path, name)
+        DEBUG('tmacd') << 'hah upload' << path
+        await self._uploader.upload_torrent(settings['upload_to'], self._download_path, [name])
+        DEBUG('tmacd') << 'rm -rf' << path
+        shutil.rmtree(path, ignore_errors=True)
 
 
 class HaHListener(object):

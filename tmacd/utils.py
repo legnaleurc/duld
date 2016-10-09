@@ -34,13 +34,13 @@ def main(args):
     def close(signum, frame):
         hah_listener.close()
         uploader.close()
+        main_loop.stop()
+        main_loop.close()
     signal.signal(signal.SIGINT, close)
 
     with create_sockets([settings['port']]) as sockets:
         server.add_sockets(sockets)
         main_loop.start()
-        uploader.close()
-        main_loop.close()
 
     return 0
 
