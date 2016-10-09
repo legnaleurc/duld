@@ -56,6 +56,7 @@ class HaHEventHandler(PatternMatchingEventHandler):
             return
         name = m.group(1)
         paths = self._download_path.glob('{0}*'.format(name))
+        paths = list(paths)
         if len(paths) != 1:
             ERROR('tmacd') << '(hah)' << name << 'has multiple target'
             return
