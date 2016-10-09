@@ -1,4 +1,5 @@
 import argparse
+import signal
 
 from tornado import web as tw, ioloop as ti, httpserver as ths
 from wcpan.listen import create_sockets
@@ -28,6 +29,9 @@ def main(args):
         (r'^/torrents/(\d+)$', api.TorrentsHandler),
     ], uploader=uploader)
     server = ths.HTTPServer(application)
+
+    signal.signal(signal.SIGINT, uploader.close)
+
     with create_sockets([settings['port']]) as sockets:
         server.add_sockets(sockets)
         main_loop.start()
