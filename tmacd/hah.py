@@ -5,6 +5,7 @@ import re
 from tornado import ioloop as ti
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
+from wcpan.logger import DEBUG
 
 from . import settings
 
@@ -47,8 +48,13 @@ class HaHEventHandler(PatternMatchingEventHandler):
             m = re.match(r'\[info\] GalleryDownloader: Finished download of gallery: (.*)\n$', line)
             if m:
                 name = m.group(1)
-                self._loop.add_callback(self._uploader.upload_torrent, settings['upload_to'], self._download_path, [name])
+                self._loop.add_callback(self._upload, name)
             self._lines.pop(0)
+
+    async def _upload(self, name):
+        DEBUG('tmacd') << 'hah upload' << self._download_path << name
+        # await self._uploader.upload_torrent(settings['upload_to'], self._download_path, [name])
+        DEBUG('tmacd') << 'rm -rf' << op.join(self._download_path, name)
 
 
 class HaHListener(object):
