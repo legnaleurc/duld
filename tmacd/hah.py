@@ -58,7 +58,7 @@ class HaHEventHandler(PatternMatchingEventHandler):
         paths = self._download_path.glob('{0}*'.format(name))
         paths = list(paths)
         if len(paths) != 1:
-            ERROR('tmacd') << '(hah)' << name << 'has multiple target'
+            ERROR('tmacd') << '(hah)' << name << 'has multiple target' << paths
             return
         self._loop.add_callback(self._upload, paths[1])
 
