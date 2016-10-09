@@ -31,7 +31,7 @@ def main(args):
     ], uploader=uploader)
     server = ths.HTTPServer(application)
 
-    def close():
+    def close(signum, frame):
         hah_listener.close()
         uploader.close()
     signal.signal(signal.SIGINT, close)

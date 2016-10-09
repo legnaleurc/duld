@@ -22,6 +22,8 @@ class HaHEventHandler(PatternMatchingEventHandler):
         self._index = op.getsize(log_path)
         self._loop = ti.IOLoop.current()
         self._lines = []
+        self._current_gid = ''
+        self._parse_line = self._parse_gid
 
     def on_modified(self, event):
         if op.getsize(self._log_path) < self._index:
@@ -45,11 +47,28 @@ class HaHEventHandler(PatternMatchingEventHandler):
                     self._lines.pop(0)
                     line += self._lines[0]
 
-            m = re.match(r'\[info\] GalleryDownloader: Finished download of gallery: (.*)\n$', line)
-            if m:
-                name = m.group(1)
-                self._loop.add_callback(self._upload, name)
-            self._lines.pop(0)
+            self._parse_line(line):
+
+    def _parse_gid(self, line):
+        m = re.match(r'.*\[debug\] GalleryDownloader: Parsed gid=(\d+)\n', line)
+        if m:
+            self._current_gid = m.group(1)
+            self._parse_line = self._parse_pre_title
+        self._lines.pop(0)
+
+    def _parse_pre_title(self, line):
+        m = re.match(r'.*\[debug\] GalleryDownloader: Parsed title=(.+)\n', line)
+        if m:
+            self._parse_line = self._parse_post_title
+        self._lines.pop(0)
+
+    def _parse_post_title(self, line):
+        m = re.match(r'.*\[info\] GalleryDownloader: Finished download of gallery: (.+)\n', line)
+        if m:
+            name = m.group(1)
+            self._loop.add_callback(self._upload, '{0} [{1}]'.format(name, self._current_gid))
+            self._current_gid = ''
+        self._lines.pop(0)
 
     async def _upload(self, name):
         DEBUG('tmacd') << 'hah upload' << self._download_path << name
