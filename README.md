@@ -19,12 +19,12 @@ Modify Transmission settings:
 
 Transmission must be able to execute the script, watch out permission problem.
 
-Look `tmacd.example.yaml` and create your own configuration.
+Look `acdul.example.yaml` and create your own configuration.
 
 ## Run Daemon
 
 ```shell
-python3 -m tmacd --settings=tmacd.yaml
+python3 -m acdul --settings=tmacd.yaml
 ```
 
 ## RESTful API
