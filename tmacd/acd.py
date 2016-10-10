@@ -124,7 +124,7 @@ class ACDUploader(object):
                     ok = await self._acd.sync()
                     if not ok:
                         return False
-                return self._upload_file(node, local_path)
+                return await self._upload_file(node, local_path)
 
             remote_md5 = child_node.md5
             local_md5 = md5sum(local_path)
