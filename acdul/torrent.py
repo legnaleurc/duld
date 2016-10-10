@@ -10,28 +10,28 @@ async def upload_torrent(uploader, torrent_id):
     torrent_client = connect_transmission()
     torrent = torrent_client.get_torrent(torrent_id)
     if not torrent:
-        WARNING('tmacd') << 'no such torrent id {0}'.format(torrent_id)
+        WARNING('acdul') << 'no such torrent id {0}'.format(torrent_id)
         return
     torrent_name = torrent.name
-    INFO('tmacd') << '{0}: processing'.format(torrent_name)
+    INFO('acdul') << '{0}: processing'.format(torrent_name)
 
     root_items = get_root_items(torrent)
     if not root_items:
-        WARNING('tmacd') << '{0}: no item to upload?'.format(torrent_name)
+        WARNING('acdul') << '{0}: no item to upload?'.format(torrent_name)
         return
-    DEBUG('tmacd') << '{0}: {1}'.format(torrent_name, root_items)
+    DEBUG('acdul') << '{0}: {1}'.format(torrent_name, root_items)
 
-    INFO('tmacd') << '{0}: begin uploading'.format(torrent_name)
+    INFO('acdul') << '{0}: begin uploading'.format(torrent_name)
     torrent_root = torrent.downloadDir
     # upload files to Amazon Cloud Drive
     try:
         await uploader.upload_torrent(settings['upload_to'], torrent_root, root_items)
     except Exception as e:
-        EXCEPTION('tmacd') << '{0}: upload failed'.format(torrent_name)
-        INFO('tmacd') << 'retry url: /torrents/{0}'.format(torrent_id)
+        EXCEPTION('acdul') << '{0}: upload failed'.format(torrent_name)
+        INFO('acdul') << 'retry url: /torrents/{0}'.format(torrent_id)
         return
 
-    INFO('tmacd') << '{0}: remove torrent'.format(torrent_name)
+    INFO('acdul') << '{0}: remove torrent'.format(torrent_name)
     # remove the task from Transmission first
     remove_torrent(torrent_client, torrent_id)
 

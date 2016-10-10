@@ -18,7 +18,7 @@ def main(args):
         'requests.packages.urllib3.connectionpool',
         'wcpan.acd',
         'wcpan.worker',
-        'tmacd',))
+        'acdul',))
 
     main_loop = ti.IOLoop.instance()
 
@@ -46,9 +46,9 @@ def main(args):
 
 
 def parse_args(args):
-    parser = argparse.ArgumentParser(prog='tmacd',
+    parser = argparse.ArgumentParser(prog='acdul',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-s', '--settings', default='tmacd.yaml', type=str,
+    parser.add_argument('-s', '--settings', default='acdul.yaml', type=str,
                         help='settings file name')
     args = parser.parse_args(args[1:])
     return args

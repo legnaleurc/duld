@@ -27,13 +27,13 @@ class ACDUploader(object):
 
         node = await self._acd.resolve_path(remote_path)
         if not node:
-            ERROR('tmacd') << remote_path << 'not found'
+            ERROR('acdul') << remote_path << 'not found'
             return False
 
         local_path = pathlib.Path(local_path)
         ok = await self._upload(node, local_path)
         if not ok:
-            ERROR('tmacd') << item << 'upload failed'
+            ERROR('acdul') << item << 'upload failed'
         return ok
 
     async def upload_torrent(self, remote_path, torrent_root, root_items):
@@ -44,7 +44,7 @@ class ACDUploader(object):
 
         node = await self._acd.resolve_path(remote_path)
         if not node:
-            ERROR('tmacd') << remote_path << 'not found'
+            ERROR('acdul') << remote_path << 'not found'
             return False
 
         # files/directories to be upload
@@ -52,14 +52,14 @@ class ACDUploader(object):
         for item in items:
             ok = await self._upload(node, item)
             if not ok:
-                ERROR('tmacd') << item << 'upload failed'
+                ERROR('acdul') << item << 'upload failed'
                 continue
 
         return True
 
     async def _upload(self, node, local_path):
         if should_exclude(local_path.name):
-            INFO('tmacd') << 'excluded' << local_path
+            INFO('acdul') << 'excluded' << local_path
             return True
 
         if local_path.is_dir():
@@ -76,7 +76,7 @@ class ACDUploader(object):
         if child_node and child_node.is_file:
             # is file
             path = await self._acd.resolve_path(child_node)
-            ERROR('tmacd') << '(remote)' << path << 'is a file'
+            ERROR('acdul') << '(remote)' << path << 'is a file'
             return False
         elif not child_node or not child_node.is_available or not node.is_available:
             # not exists
@@ -84,14 +84,14 @@ class ACDUploader(object):
             if not child_node:
                 path = await self._acd.resolve_path(node)
                 path = op.join(path, dir_name)
-                ERROR('tmacd') << '(remote) cannot create' << path
+                ERROR('acdul') << '(remote) cannot create' << path
                 return False
 
         all_ok = True
         for child_path in local_path.iterdir():
             ok = await self._upload(child_node, child_path)
             if not ok:
-                ERROR('tmacd') << '(remote) cannot upload' << child_path
+                ERROR('acdul') << '(remote) cannot upload' << child_path
                 all_ok = False
 
         return all_ok
@@ -104,22 +104,22 @@ class ACDUploader(object):
         child_node = await self._acd.get_child(node, file_name)
         if child_node and child_node.is_available:
             if child_node.is_folder:
-                ERROR('tmacd') << '(remote)' << remote_path << 'is a directory'
+                ERROR('acdul') << '(remote)' << remote_path << 'is a directory'
                 return False
             # check integrity
             local_md5 = md5sum(local_path)
             remote_md5 = child_node.md5
             if local_md5 != remote_md5:
-                ERROR('tmacd') << '(remote)' << remote_path << 'has a different md5 ({0}, {1})'.format(local_md5, remote_md5)
+                ERROR('acdul') << '(remote)' << remote_path << 'has a different md5 ({0}, {1})'.format(local_md5, remote_md5)
                 return False
-            INFO('tmacd') << remote_path << 'already exists'
+            INFO('acdul') << remote_path << 'already exists'
 
         if not child_node or not child_node.is_available:
-            INFO('tmacd') << 'uploading' << remote_path
+            INFO('acdul') << 'uploading' << remote_path
             try:
                 child_node = await self._acd.upload_file(node, str(local_path))
             except Exception as e:
-                EXCEPTION('tmacd') << 'retry'
+                EXCEPTION('acdul') << 'retry'
                 async with self._sync_lock:
                     ok = await self._acd.sync()
                     if not ok:
@@ -129,7 +129,7 @@ class ACDUploader(object):
             remote_md5 = child_node.md5
             local_md5 = md5sum(local_path)
             if local_md5 != remote_md5:
-                ERROR('tmacd') << '(remote)' << remote_path << 'has a different md5 ({0}, {1})'.format(local_md5, remote_md5)
+                ERROR('acdul') << '(remote)' << remote_path << 'has a different md5 ({0}, {1})'.format(local_md5, remote_md5)
                 return False
 
         return True

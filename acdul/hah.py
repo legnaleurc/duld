@@ -59,14 +59,14 @@ class HaHEventHandler(PatternMatchingEventHandler):
         paths = self._download_path.glob('{0}*'.format(glob.escape(name)))
         paths = list(paths)
         if len(paths) != 1:
-            ERROR('tmacd') << '(hah)' << name << 'has multiple target' << paths
+            ERROR('acdul') << '(hah)' << name << 'has multiple target' << paths
             return
         self._loop.add_callback(self._upload, paths[0])
 
     async def _upload(self, path):
-        DEBUG('tmacd') << 'hah upload' << path
+        DEBUG('acdul') << 'hah upload' << path
         await self._uploader.upload_path(settings['upload_to'], str(path))
-        DEBUG('tmacd') << 'rm -rf' << path
+        DEBUG('acdul') << 'rm -rf' << path
         shutil.rmtree(str(path), ignore_errors=True)
 
 
