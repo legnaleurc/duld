@@ -61,7 +61,7 @@ class HaHEventHandler(PatternMatchingEventHandler):
         if len(paths) != 1:
             ERROR('tmacd') << '(hah)' << name << 'has multiple target' << paths
             return
-        self._loop.add_callback(self._upload, paths[1])
+        self._loop.add_callback(self._upload, paths[0])
 
     async def _upload(self, path):
         DEBUG('tmacd') << 'hah upload' << path
