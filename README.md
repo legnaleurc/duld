@@ -1,6 +1,6 @@
-# tmacd
+# acdul
 
-Let Transmission upload completed torrent to Amazon Cloud Drive.
+Let Transmission and HaH upload completed torrent to Amazon Cloud Drive.
 
 ## Requirements
 
