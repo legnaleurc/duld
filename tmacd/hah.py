@@ -1,3 +1,4 @@
+import glob
 import os
 import os.path as op
 import pathlib
@@ -55,7 +56,7 @@ class HaHEventHandler(PatternMatchingEventHandler):
         if not m:
             return
         name = m.group(1)
-        paths = self._download_path.glob('{0}*'.format(name))
+        paths = self._download_path.glob('{0}*'.format(glob.escape(name)))
         paths = list(paths)
         if len(paths) != 1:
             ERROR('tmacd') << '(hah)' << name << 'has multiple target' << paths
