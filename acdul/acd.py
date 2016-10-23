@@ -102,37 +102,47 @@ class ACDUploader(object):
         remote_path = pathlib.Path(remote_path, file_name)
 
         child_node = await self._acd.get_child(node, file_name)
+
         if child_node and child_node.is_available:
             if child_node.is_folder:
                 ERROR('acdul') << '(remote)' << remote_path << 'is a directory'
                 return False
+
             # check integrity
-            local_md5 = md5sum(local_path)
-            remote_md5 = child_node.md5
-            if local_md5 != remote_md5:
-                ERROR('acdul') << '(remote)' << remote_path << 'has a different md5 ({0}, {1})'.format(local_md5, remote_md5)
+            ok = verify_remote_file(local_path, remote_path, child_node)
+            if not ok:
                 return False
             INFO('acdul') << remote_path << 'already exists'
 
         if not child_node or not child_node.is_available:
             INFO('acdul') << 'uploading' << remote_path
+
             try:
                 child_node = await self._acd.upload_file(node, str(local_path))
             except Exception as e:
-                EXCEPTION('acdul') << 'retry'
+                WARNING('acdul') << 'retry because' << str(e)
                 async with self._sync_lock:
                     ok = await self._acd.sync()
                     if not ok:
                         return False
+                # FIXME deep recursion?
                 return await self._upload_file(node, local_path)
 
-            remote_md5 = child_node.md5
-            local_md5 = md5sum(local_path)
-            if local_md5 != remote_md5:
-                ERROR('acdul') << '(remote)' << remote_path << 'has a different md5 ({0}, {1})'.format(local_md5, remote_md5)
+            # check integrity
+            ok = verify_remote_file(local_path, remote_path, child_node)
+            if not ok:
                 return False
 
         return True
+
+
+def verify_remote_file(local_path, remote_path, node):
+    local_md5 = md5sum(local_path)
+    remote_md5 = node.md5
+    if local_md5 != remote_md5:
+        ERROR('acdul') << '(remote)' << remote_path << 'has a different md5 ({0}, {1})'.format(local_md5, remote_md5)
+        return False
+    return True
 
 
 def md5sum(path):
