@@ -83,6 +83,6 @@ def split_all(path):
 def connect_transmission():
     opt = settings['transmission']
     client = transmissionrpc.Client(opt['host'], port=opt['port'],
-                                    user=opt['username'],
-                                    password=opt['password'])
+                                    user=opt.get('username', None),
+                                    password=opt.get('password', None))
     return client
