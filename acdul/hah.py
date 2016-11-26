@@ -10,17 +10,16 @@ from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 from wcpan.logger import DEBUG, ERROR
 
-from . import settings
-
 
 class HaHEventHandler(PatternMatchingEventHandler):
 
-    def __init__(self, log_path, download_path, uploader):
+    def __init__(self, log_path, download_path, upload_path, uploader):
         super(HaHEventHandler, self).__init__(patterns=[
             log_path,
         ])
         self._log_path = log_path
         self._download_path = pathlib.Path(download_path)
+        self._upload_path = upload_path
         self._uploader = uploader
         self._index = op.getsize(log_path)
         self._loop = ti.IOLoop.current()
@@ -65,7 +64,7 @@ class HaHEventHandler(PatternMatchingEventHandler):
 
     async def _upload(self, path):
         DEBUG('acdul') << 'hah upload' << path
-        await self._uploader.upload_path(settings['upload_to'], str(path))
+        await self._uploader.upload_path(self._upload_path, str(path))
         DEBUG('acdul') << 'rm -rf' << path
         shutil.rmtree(str(path), ignore_errors=True)
 

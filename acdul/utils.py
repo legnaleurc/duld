@@ -23,7 +23,10 @@ def main(args):
     main_loop = ti.IOLoop.instance()
 
     uploader = acd.ACDUploader()
-    hah_listener = hah.HaHListener(settings['hah']['log_path'], settings['hah']['download_path'], uploader)
+    hah_listener = hah.HaHListener(settings['hah']['log_path'],
+                                   settings['hah']['download_path'],
+                                   settings['upload_to'],
+                                   uploader)
 
     application = tw.Application([
         (r'^/torrents$', api.TorrentsHandler),
