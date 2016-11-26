@@ -11,7 +11,7 @@ from . import api, acd, hah, settings
 def main(args):
     args = parse_args(args)
     settings.reload(args.settings)
-    setup_logger(settings['log_path'], (
+    setup_logger((
         'tornado.access',
         'tornado.application',
         'tornado.general',
@@ -19,7 +19,8 @@ def main(args):
         'transmissionrpc',
         'wcpan.acd',
         'wcpan.worker',
-        'acdul',))
+        'acdul',
+    ), settings['log_path'])
 
     main_loop = ti.IOLoop.instance()
 
