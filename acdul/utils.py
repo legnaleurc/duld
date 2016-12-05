@@ -16,7 +16,6 @@ def main(args):
         'tornado.application',
         'tornado.general',
         'requests.packages.urllib3.connectionpool',
-        'transmissionrpc',
         'wcpan.acd',
         'wcpan.worker',
         'acdul',
