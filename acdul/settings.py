@@ -12,7 +12,7 @@ class Settings(object):
         return self._data[key]
 
     def reload(self, path):
-        with open(path, 'r') as fin:
+        with open(path, mode='r', encoding='utf-8') as fin:
             self._data = yaml.safe_load(fin)
 
 
