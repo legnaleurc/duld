@@ -5,7 +5,7 @@ import re
 
 from tornado import locks as tl
 from wcpan.acd import ACDController
-from wcpan.logger import DEBUG, INFO, ERROR, EXCEPTION
+from wcpan.logger import DEBUG, INFO, ERROR, EXCEPTION, WARNING
 
 from . import settings
 
