@@ -24,10 +24,13 @@ async def upload_torrent(uploader, torrent_id):
     INFO('acdul') << '{0}: begin uploading'.format(torrent_name)
     torrent_root = torrent.downloadDir
     # upload files to Amazon Cloud Drive
+    ok = False
     try:
-        await uploader.upload_torrent(settings['upload_to'], torrent_root, root_items)
+        ok = await uploader.upload_torrent(settings['upload_to'], torrent_root, root_items)
     except Exception as e:
-        EXCEPTION('acdul') << '{0}: upload failed'.format(torrent_name)
+        EXCEPTION('acdul')
+    if not ok:
+        INFO('acdul') << '{0}: upload failed'.format(torrent_name)
         INFO('acdul') << 'retry url: /torrents/{0}'.format(torrent_id)
         return
 

@@ -49,13 +49,15 @@ class ACDUploader(object):
 
         # files/directories to be upload
         items = map(lambda _: pathlib.Path(torrent_root, _), root_items)
+        all_ok = True
         for item in items:
             ok = await self._upload(node, item)
             if not ok:
                 ERROR('acdul') << item << 'upload failed'
+                all_ok = False
                 continue
 
-        return True
+        return all_ok
 
     async def _upload(self, node, local_path):
         if should_exclude(local_path.name):
@@ -96,6 +98,20 @@ class ACDUploader(object):
 
         return all_ok
 
+    async def _upload_file_retry(self, node, local_path):
+        while True:
+            try:
+                ok = await self._upload_file(self, node, local_path)
+                return ok
+            except Exception as e:
+                WARNING('acdul') << 'retry because' << str(e)
+
+            async with self._sync_lock:
+                ok = await self._acd.sync()
+                if not ok:
+                    ERROR('acdul') << 'sync failed'
+                    return False
+
     async def _upload_file(self, node, local_path):
         file_name = local_path.name
         remote_path = await self._acd.get_path(node)
@@ -117,16 +133,7 @@ class ACDUploader(object):
         if not child_node or not child_node.is_available:
             INFO('acdul') << 'uploading' << remote_path
 
-            try:
-                child_node = await self._acd.upload_file(node, str(local_path))
-            except Exception as e:
-                WARNING('acdul') << 'retry because' << str(e)
-                async with self._sync_lock:
-                    ok = await self._acd.sync()
-                    if not ok:
-                        return False
-                # FIXME deep recursion?
-                return await self._upload_file(node, local_path)
+            child_node = await self._acd.upload_file(node, str(local_path))
 
             # check integrity
             ok = verify_remote_file(local_path, remote_path, child_node)
