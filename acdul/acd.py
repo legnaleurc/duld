@@ -67,7 +67,7 @@ class ACDUploader(object):
         if local_path.is_dir():
             ok = await self._upload_directory(node, local_path)
         else:
-            ok = await self._upload_file(node, local_path)
+            ok = await self._upload_file_retry(node, local_path)
         return ok
 
     async def _upload_directory(self, node, local_path):
