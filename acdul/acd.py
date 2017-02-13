@@ -101,7 +101,7 @@ class ACDUploader(object):
     async def _upload_file_retry(self, node, local_path):
         while True:
             try:
-                ok = await self._upload_file(self, node, local_path)
+                ok = await self._upload_file(node, local_path)
                 return ok
             except Exception as e:
                 WARNING('acdul') << 'retry because' << str(e)
