@@ -1,11 +1,14 @@
+from functools import partial as ftp
 import hashlib
 import os.path as op
 import pathlib
 import re
+import threading
 
 from tornado import locks as tl
 from wcpan.acd import ACDController
 from wcpan.logger import DEBUG, INFO, ERROR, EXCEPTION, WARNING
+import wcpan.worker as ww
 
 from . import settings
 
@@ -15,8 +18,10 @@ class ACDUploader(object):
     def __init__(self):
         self._acd = ACDController(op.expanduser('~/.cache/acd_cli'))
         self._sync_lock = tl.Lock()
+        self._worker = ww.AsyncWorker()
 
     def close(self):
+        self._worker.stop()
         self._acd.close()
 
     async def upload_path(self, remote_path, local_path):
@@ -125,7 +130,7 @@ class ACDUploader(object):
                 return False
 
             # check integrity
-            ok = verify_remote_file(local_path, remote_path, child_node)
+            ok = await self._verify_remote_file(local_path, remote_path, child_node.md5)
             if not ok:
                 return False
             INFO('acdul') << remote_path << 'already exists'
@@ -136,23 +141,23 @@ class ACDUploader(object):
             child_node = await self._acd.upload_file(node, str(local_path))
 
             # check integrity
-            ok = verify_remote_file(local_path, remote_path, child_node)
+            ok = await self._verify_remote_file(local_path, remote_path, child_node.md5)
             if not ok:
                 return False
 
         return True
 
-
-def verify_remote_file(local_path, remote_path, node):
-    local_md5 = md5sum(local_path)
-    remote_md5 = node.md5
-    if local_md5 != remote_md5:
-        ERROR('acdul') << '(remote)' << remote_path << 'has a different md5 ({0}, {1})'.format(local_md5, remote_md5)
-        return False
-    return True
+    async def _verify_remote_file(self, local_path, remote_path, remote_md5):
+        fn = ftp(md5sum, local_path)
+        local_md5 = await self._worker.do(fn)
+        if local_md5 != remote_md5:
+            ERROR('acdul') << '(remote)' << remote_path << 'has a different md5 ({0}, {1})'.format(local_md5, remote_md5)
+            return False
+        return True
 
 
 def md5sum(path):
+    assert threading.current_thread() is not threading.main_thread()
     hasher = hashlib.md5()
     with path.open('rb') as fin:
         while True:
