@@ -107,9 +107,13 @@ class ACDUploader(object):
         while True:
             try:
                 ok = await self._upload_file(node, local_path)
-                return ok
+            except ww.WorkerError as e:
+                EXCEPTION('acdul') << 'worker error:' << str(e)
+                return False
             except Exception as e:
                 WARNING('acdul') << 'retry because' << str(e)
+            else:
+                return ok
 
             async with self._sync_lock:
                 ok = await self._acd.sync()
