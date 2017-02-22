@@ -19,6 +19,7 @@ class ACDUploader(object):
         self._acd = ACDController(op.expanduser('~/.cache/acd_cli'))
         self._sync_lock = tl.Lock()
         self._worker = ww.AsyncWorker()
+        self._worker.start()
 
     def close(self):
         self._worker.stop()
