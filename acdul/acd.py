@@ -6,7 +6,7 @@ import re
 import threading
 
 from tornado import locks as tl
-from wcpan.acd import ACDController
+from wcpan.acd import ACDController, RequestError
 from wcpan.logger import DEBUG, INFO, ERROR, EXCEPTION, WARNING
 import wcpan.worker as ww
 
@@ -111,6 +111,11 @@ class ACDUploader(object):
             except ww.WorkerError as e:
                 EXCEPTION('acdul') << 'worker error:' << str(e)
                 return False
+            except RequestError as e:
+                if e.status_code == 409:
+                    WARNING('acdul') << '*found error code 409*' << repr(e.msg)
+                    return False
+                WARNING('acdul') << 'retry because' << str(e)
             except Exception as e:
                 WARNING('acdul') << 'retry because' << str(e)
             else:
