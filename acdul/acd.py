@@ -1,5 +1,6 @@
 from functools import partial as ftp
 import hashlib
+import json
 import os.path as op
 import pathlib
 import re
@@ -113,9 +114,12 @@ class ACDUploader(object):
                 return False
             except RequestError as e:
                 if e.status_code == 409:
-                    WARNING('acdul') << '*found error code 409*' << repr(e.msg)
-                    return False
-                WARNING('acdul') << 'retry because' << str(e)
+                    ok = await self._try_resolve_name_confliction(e.msg)
+                    if not ok:
+                        ERROR('acdul') << 'cannot resolve 409 for {0}, reason: {1}'.format(local_path, e.msg)
+                        return False
+                else:
+                    WARNING('acdul') << 'retry because' << str(e)
             except Exception as e:
                 WARNING('acdul') << 'retry because' << str(e)
             else:
@@ -164,6 +168,19 @@ class ACDUploader(object):
             ERROR('acdul') << '(remote)' << remote_path << 'has a different md5 ({0}, {1})'.format(local_md5, remote_md5)
             return False
         return True
+
+    # used in exception handler, DO NOT throw another exception again
+    async def _try_resolve_name_confliction(self, maybe_json):
+        try:
+            data = json.loads(maybe_json)
+            if data['code'] != 'NAME_ALREADY_EXISTS':
+                return False
+            node_id = data['info']['nodeId']
+            ok = await self._acd.trash(node_id)
+            return ok
+        except Exception as e:
+            EXCEPTION('acdul', e)
+        return False
 
 
 def md5sum(path):
