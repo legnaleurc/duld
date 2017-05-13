@@ -29,11 +29,13 @@ class DiskSpaceListener(object):
 
         if free_space_in_gb >= reserved_space_in_gb['safe']:
             if self._halted:
+                INFO('acdul') << 'resuming halted torrents: {0}'.format(free_space_in_gb)
                 resume_halted_torrents(torrent_client)
                 self._halted = False
             return
         if free_space_in_gb <= reserved_space_in_gb['danger']:
             if not self._halted:
+                INFO('acdul') << 'halting queued torrents: {0}'.format(free_space_in_gb)
                 halt_pending_torrents(torrent_client)
                 self._halted = True
             return
