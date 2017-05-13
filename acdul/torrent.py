@@ -1,9 +1,42 @@
+import os
 import os.path as op
 
 import transmissionrpc
+import tornado.ioloop as ti
 from wcpan.logger import DEBUG, INFO, WARNING, EXCEPTION
 
 from . import settings
+
+
+class DiskSpaceListener(object):
+
+    def __init__(self):
+        super(DiskSpaceListener, self).__init__()
+        # check space every minute
+        self._timer = ti.PeriodicCallback(self._check_space, 60 * 1000)
+        self._timer.start()
+        self._halted = False
+
+    def close(self):
+        self._timer.stop()
+
+    def _check_space(self):
+        torrent_client = connect_transmission()
+        torrent_session = torrent_client.session_stats()
+        free_space_in_gb = torrent_session.download_dir_free_space / 1024 / 1024
+
+        reserved_space_in_gb = settings['reserved_space_in_gb']
+
+        if free_space_in_gb >= reserved_space_in_gb['safe']:
+            if self._halted:
+                resume_halted_torrents(torrent_client)
+                self._halted = False
+            return
+        if free_space_in_gb <= reserved_space_in_gb['danger']:
+            if not self._halted:
+                halt_pending_torrents(torrent_client)
+                self._halted = True
+            return
 
 
 async def upload_torrent(uploader, torrent_id):
@@ -89,3 +122,17 @@ def connect_transmission():
                                     user=opt.get('username', None),
                                     password=opt.get('password', None))
     return client
+
+
+def halt_pending_torrents(client):
+    torrents = client.get_torrents()
+    torrents = filter(lambda t: t.status == 'downloading' and t.downloadedEver == 0, torrents)
+    for t in torrents:
+        t.stop()
+
+
+def resume_halted_torrents(client):
+    torrents = client.get_torrents()
+    torrents = filter(lambda t: t.status == 'stopped' and t.downloadedEver == 0, torrents)
+    for t in torrents:
+        t.start()
