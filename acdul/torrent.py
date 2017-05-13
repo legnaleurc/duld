@@ -23,7 +23,7 @@ class DiskSpaceListener(object):
     def _check_space(self):
         torrent_client = connect_transmission()
         torrent_session = torrent_client.session_stats()
-        free_space_in_gb = torrent_session.download_dir_free_space / 1024 / 1024
+        free_space_in_gb = torrent_session.download_dir_free_space / 1024 / 1024 / 1024
 
         reserved_space_in_gb = settings['reserved_space_in_gb']
 
