@@ -5,7 +5,7 @@ from tornado import web as tw, ioloop as ti, httpserver as ths
 from wcpan.listen import create_sockets
 from wcpan.logger import setup as setup_logger
 
-from . import api, acd, hah, settings
+from . import api, acd, hah, settings, torrent
 
 
 def main(args):
@@ -31,6 +31,9 @@ def main(args):
                                        settings['hah']['download_path'],
                                        settings['upload_to'],
                                        uploader)
+    disk_space_listener = None
+    if settings['reserved_space_in_gb']:
+        disk_space_listener = torrent.DiskSpaceListener()
 
     application = tw.Application([
         (r'^/torrents$', api.TorrentsHandler),
@@ -41,6 +44,8 @@ def main(args):
     def close(signum, frame):
         if hah_listener:
             hah_listener.close()
+        if disk_space_listener:
+            disk_space_listener.close()
         uploader.close()
         main_loop.stop()
     signal.signal(signal.SIGINT, close)
