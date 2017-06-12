@@ -3,10 +3,10 @@ port: 1234
 # wont upload these files
 exclude_pattern:
   - ^.*padding_file.*BitComet.*$
-# the upload directory on ACD
+# the upload directory on remote drive
 upload_to: /tmp
 # daemon log file path
-log_path: /tmp/acdul.log
+log_path: /tmp/duld.log
 # transmission RPC settings
 transmission:
   host: localhost

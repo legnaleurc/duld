@@ -5,7 +5,7 @@ from tornado import web as tw, ioloop as ti, httpserver as ths
 from wcpan.listen import create_sockets
 from wcpan.logger import setup as setup_logger
 
-from . import api, acd, hah, settings, torrent
+from . import api, drive, hah, settings, torrent
 
 
 def main(args):
@@ -15,15 +15,15 @@ def main(args):
         'tornado.access',
         'tornado.application',
         'tornado.general',
-        'requests.packages.urllib3.connectionpool',
-        'wcpan.acd',
+        'wcpan.drive.google',
         'wcpan.worker',
-        'acdul',
+        'duld',
     ), settings['log_path'])
 
     main_loop = ti.IOLoop.instance()
 
-    uploader = acd.ACDUploader()
+    uploader = drive.DriveUploader()
+    uploader.initialize()
 
     hah_listener = None
     if settings['hah']:
@@ -41,13 +41,15 @@ def main(args):
     ], uploader=uploader)
     server = ths.HTTPServer(application)
 
-    def close(signum, frame):
+    async def real_close():
         if hah_listener:
             hah_listener.close()
         if disk_space_listener:
             disk_space_listener.close()
-        uploader.close()
+        async uploader.close()
         main_loop.stop()
+    def close(signum, frame):
+        main_loop.add_callback_from_signal(real_close)
     signal.signal(signal.SIGINT, close)
 
     with create_sockets([settings['port']]) as sockets:
@@ -59,9 +61,9 @@ def main(args):
 
 
 def parse_args(args):
-    parser = argparse.ArgumentParser(prog='acdul',
+    parser = argparse.ArgumentParser(prog='duld',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-s', '--settings', default='acdul.yaml', type=str,
+    parser.add_argument('-s', '--settings', default='duld.yaml', type=str,
                         help='settings file name')
     args = parser.parse_args(args[1:])
     return args
