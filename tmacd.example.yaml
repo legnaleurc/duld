@@ -1,0 +1,17 @@
+# daemon listening port
+port: 1234
+# wont upload these files
+exclude_pattern:
+  - ^.*padding_file.*BitComet.*$
+# the upload directory on ACD
+upload_to: /tmp
+# transmission RPC settings
+transmission:
+  host: localhost
+  port: 9091
+  username:
+  password:
+# daemon log file path
+log_path: /tmp/tmacd.log
+# acdcli log file path
+acdcli_log_path: /tmp/acd.log
