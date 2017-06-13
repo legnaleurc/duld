@@ -5,13 +5,17 @@ exclude_pattern:
   - ^.*padding_file.*BitComet.*$
 # the upload directory on ACD
 upload_to: /tmp
+# daemon log file path
+log_path: /tmp/acdul.log
 # transmission RPC settings
 transmission:
   host: localhost
   port: 9091
   username:
   password:
-# daemon log file path
-log_path: /tmp/tmacd.log
-# acdcli log file path
-acdcli_log_path: /tmp/acd.log
+hah:
+  log_path: /path/to/hah/log
+  download_path: /path/to/hah/download
+reserved_space_in_gb:
+  safe: 8
+  danger: 4
