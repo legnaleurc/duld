@@ -1,5 +1,5 @@
 import concurrent.futures as cf
-from functools import partial as ftp
+import functools as ft
 import hashlib
 import json
 import multiprocessing as mp
