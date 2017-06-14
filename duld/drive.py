@@ -107,7 +107,7 @@ class DriveUploader(object):
             return False
         elif not child_node or not child_node.is_available or not node.is_available:
             # not exists
-            child_node = await self._drive.create_folder(dir_name, node)
+            child_node = await self._drive.create_folder(node, dir_name)
             if not child_node:
                 path = await self._drive.get_path(node)
                 path = op.join(path, dir_name)
