@@ -46,7 +46,7 @@ def main(args):
             hah_listener.close()
         if disk_space_listener:
             disk_space_listener.close()
-        async uploader.close()
+        await uploader.close()
         main_loop.stop()
     def close(signum, frame):
         main_loop.add_callback_from_signal(real_close)
