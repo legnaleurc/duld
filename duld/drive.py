@@ -1,17 +1,30 @@
+import concurrent.futures as cf
 from functools import partial as ftp
 import hashlib
 import json
+import multiprocessing as mp
 import os.path as op
 import pathlib
 import re
 import threading
 
 from tornado import locks as tl
+import tornado.platform.asyncio as tpaio
 import wcpan.drive.google as wdg
 from wcpan.logger import DEBUG, INFO, ERROR, EXCEPTION, WARNING
 import wcpan.worker as ww
 
 from . import settings
+
+
+def off_main_thread(fn):
+    @ft.wraps(fn)
+    def wrapper(self, *args, **kwargs):
+        future = self._pool.submit(fn, self, *args, **kwargs)
+        # NOTE dirty hack
+        future = tpaio.to_tornado_future(future)
+        return future
+    return wrapper
 
 
 class DriveUploader(object):
@@ -20,12 +33,14 @@ class DriveUploader(object):
         self._drive = wdg.Drive(op.expanduser('~/.cache/wcpan/drive/google'))
         self._sync_lock = tl.Lock()
         self._queue = ww.AsyncQueue(8)
+        self._pool = cf.ThreadPoolExecutor(max_workers=mp.cpu_count())
 
     def initialize(self):
         self._drive.initialize()
         self._queue.start()
 
     async def close(self):
+        self._pool.shutdown()
         await self._queue.stop()
         self._drive.close()
 
@@ -158,9 +173,9 @@ class DriveUploader(object):
 
         return True
 
-    async def _verify_remote_file(self, local_path, remote_path, remote_md5):
-        fn = ftp(md5sum, local_path)
-        local_md5 = await self._pool.submit(fn)
+    @off_main_thread
+    def _verify_remote_file(self, local_path, remote_path, remote_md5):
+        local_md5 = md5sum(local_path)
         if local_md5 != remote_md5:
             ERROR('duld') << '(remote)' << remote_path << 'has a different md5 ({0}, {1})'.format(local_md5, remote_md5)
             return False
