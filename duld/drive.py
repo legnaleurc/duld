@@ -112,14 +112,11 @@ class DriveUploader(object):
         while True:
             try:
                 ok = await self._upload_file(node, local_path)
-            except wdg.UploadError as e:
-                if e.status == '409':
-                    ok = await self._try_resolve_name_confliction(e.msg)
-                    if not ok:
-                        ERROR('duld') << 'cannot resolve 409 for {0}, reason: {1}'.format(local_path, e.msg)
-                        return False
-                else:
-                    WARNING('duld') << 'retry because' << str(e)
+            except wdg.UploadConflictedError as e:
+                ok = await self._try_resolve_name_confliction(e.node)
+                if not ok:
+                    ERROR('duld') << 'cannot resolve conclict for {0}, remote id: {1}'.format(local_path, e.node.id_)
+                    return False
             except Exception as e:
                 WARNING('duld') << 'retry because' << str(e)
             else:
@@ -170,13 +167,9 @@ class DriveUploader(object):
         return True
 
     # used in exception handler, DO NOT throw another exception again
-    async def _try_resolve_name_confliction(self, maybe_json):
+    async def _try_resolve_name_confliction(self, node):
         try:
-            data = json.loads(maybe_json)
-            if data['code'] != 'NAME_ALREADY_EXISTS':
-                return False
-            node_id = data['info']['nodeId']
-            ok = await self._drive.trash_node_by_id(node_id)
+            ok = await self._drive.trash_node_by_id(node.id_)
             return ok
         except Exception as e:
             EXCEPTION('duld', e)
