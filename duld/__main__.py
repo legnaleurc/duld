@@ -1,6 +1,6 @@
 import sys
 
-from .utils import main
+from .util import main
 
 
 exit_code = main(sys.argv)
