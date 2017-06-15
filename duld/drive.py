@@ -1,4 +1,3 @@
-import concurrent.futures as cf
 import functools as ft
 import hashlib
 import json
@@ -9,7 +8,6 @@ import re
 import threading
 
 from tornado import locks as tl
-import tornado.platform.asyncio as tpaio
 import wcpan.drive.google as wdg
 from wcpan.logger import DEBUG, INFO, ERROR, EXCEPTION, WARNING
 import wcpan.worker as ww
@@ -17,14 +15,7 @@ import wcpan.worker as ww
 from . import settings
 
 
-def off_main_thread(fn):
-    @ft.wraps(fn)
-    def wrapper(self, *args, **kwargs):
-        future = self._pool.submit(fn, self, *args, **kwargs)
-        # NOTE dirty hack
-        future = tpaio.to_tornado_future(future)
-        return future
-    return wrapper
+off_main_thread = ww.off_main_thread_method('_pool')
 
 
 class DriveUploader(object):
@@ -33,7 +24,7 @@ class DriveUploader(object):
         self._drive = wdg.Drive(op.expanduser('~/.cache/wcpan/drive/google'))
         self._sync_lock = tl.Lock()
         self._queue = ww.AsyncQueue(8)
-        self._pool = cf.ThreadPoolExecutor(max_workers=mp.cpu_count())
+        self._pool = ww.create_thread_pool()
 
     def initialize(self):
         self._drive.initialize()
