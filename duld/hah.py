@@ -55,7 +55,12 @@ class HaHEventHandler(PatternMatchingEventHandler):
         if not m:
             return
         name = m.group(1)
-        paths = self._download_path.glob('{0}*'.format(glob.escape(name)))
+        m = glob.escape(name)
+        # H@H will strip long gallery name
+        if len(m) > 99:
+            m = m[:99]
+        m = '{0}*'.format(m)
+        paths = self._download_path.glob(m)
         paths = list(paths)
         if len(paths) != 1:
             ERROR('duld') << '(hah)' << name << 'has multiple target' << paths
