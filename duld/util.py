@@ -25,6 +25,7 @@ class Shell(object):
         self._loop = ti.IOLoop.instance()
         self._hah_listener = None
         self._disk_space_listener = None
+        self._uploader = drive.DriveUploader()
 
     def __call__(self):
         self._loop.add_callback(self._amain)
@@ -44,7 +45,6 @@ class Shell(object):
         return 0
 
     async def _amain(self):
-        self._uploader = drive.DriveUploader()
         await self._uploader.initialize()
 
         if settings['hah']:
