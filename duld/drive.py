@@ -26,8 +26,8 @@ class DriveUploader(object):
         self._queue = ww.AsyncQueue(8)
         self._pool = ww.create_thread_pool()
 
-    def initialize(self):
-        self._drive.initialize()
+    async def initialize(self):
+        await self._drive.initialize()
         self._queue.start()
 
     async def close(self):

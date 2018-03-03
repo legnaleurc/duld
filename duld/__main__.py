@@ -1,7 +1,8 @@
 import sys
 
-from .util import main
+from .util import Shell
 
 
-exit_code = main(sys.argv)
+main = Shell(sys.argv)
+exit_code = main()
 sys.exit(exit_code)
