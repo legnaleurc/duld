@@ -39,8 +39,8 @@ class Shell(object):
 
         with create_sockets([settings['port']]) as sockets:
             server.add_sockets(sockets)
-            main_loop.start()
-            main_loop.close()
+            self._loop.start()
+            self._loop.close()
 
         return 0
 
