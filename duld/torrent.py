@@ -1,8 +1,8 @@
+import asyncio
 import os
 import os.path as op
 
 import transmissionrpc
-import tornado.ioloop as ti
 from wcpan.logger import DEBUG, INFO, WARNING, EXCEPTION
 
 from . import settings
@@ -11,14 +11,20 @@ from . import settings
 class DiskSpaceListener(object):
 
     def __init__(self):
-        super(DiskSpaceListener, self).__init__()
-        # check space every minute
-        self._timer = ti.PeriodicCallback(self._check_space, 60 * 1000)
-        self._timer.start()
+        self._timer = None
+        self._loop = asyncio.get_event_loop()
         self._halted = False
 
-    def close(self):
-        self._timer.stop()
+    def start(self):
+        # check space every minute
+        self._timer = self._loop.call_later(60, self._one)
+
+    def stop(self):
+        self._timer.cancel()
+
+    def _one(self):
+        self._check_space()
+        self.start()
 
     def _check_space(self):
         torrent_client = connect_transmission()
