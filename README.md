@@ -1,12 +1,12 @@
-# acdul
+# ddul
 
-Let Transmission and HaH upload completed torrent to Amazon Cloud Drive.
+Let Transmission and HaH upload completed torrents to Cloud Drive.
 
 ## Requirements
 
-Only supports Python 3.5 or later.
+Only supports Python 3.6 or later.
 
-You have to setup acd_cli first.
+You have to setup wcpan.drive.google first.
 
 Modify Transmission settings:
 
@@ -19,12 +19,12 @@ Modify Transmission settings:
 
 Transmission must be able to execute the script, watch out permission problem.
 
-Look `acdul.example.yaml` and create your own configuration.
+Look `ddul.example.yaml` and create your own configuration.
 
 ## Run Daemon
 
 ```shell
-python3 -m acdul --settings=tmacd.yaml
+python3 -m ddul --settings=ddul.yaml
 ```
 
 ## RESTful API
