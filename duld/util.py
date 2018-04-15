@@ -1,8 +1,8 @@
+import asyncio
 import argparse
 import signal
 
-from tornado import web as tw, ioloop as ti, httpserver as ths
-from wcpan.listen import create_sockets
+from aiohttp import web as aw
 from wcpan.logger import setup as setup_logger
 
 from . import api, drive, hah, settings, torrent
@@ -22,51 +22,91 @@ class Shell(object):
             'duld',
         ), settings['log_path'])
 
-        self._loop = ti.IOLoop.instance()
-        self._hah_listener = None
-        self._disk_space_listener = None
-        self._uploader = drive.DriveUploader()
+        self._loop = asyncio.get_event_loop()
+        self._finished = asyncio.Event()
 
     def __call__(self):
-        self._loop.add_callback(self._amain)
-        signal.signal(signal.SIGINT, self._close_from_signal)
-
-        application = tw.Application([
-            (r'^/torrents$', api.TorrentsHandler),
-            (r'^/torrents/(\d+)$', api.TorrentsHandler),
-        ], uploader=self._uploader)
-        server = ths.HTTPServer(application)
-
-        with create_sockets([settings['port']]) as sockets:
-            server.add_sockets(sockets)
-            self._loop.start()
-            self._loop.close()
-
+        self._loop.create_task(self._amain())
+        self._loop.add_signal_handler(signal.SIGINT, self._close_from_signal)
+        self._loop.run_forever()
+        self._loop.close()
         return 0
 
     async def _amain(self):
-        await self._uploader.initialize()
+        application = aw.Application()
 
-        if settings['hah']:
-            tmp = settings['hah']
-            self._hah_listener = hah.HaHListener(tmp['log_path'],
-                                                 tmp['download_path'],
-                                                 settings['upload_to'],
-                                                 self._uploader)
+        application.router.add_view(r'/api/v1/torrents', api.TorrentsHandler)
+        application.router.add_view(r'/api/v1/torrents/{torrent_id:\d+}', api.TorrentsHandler)
 
-        if settings['reserved_space_in_gb']:
-            self._disk_space_listener = torrent.DiskSpaceListener()
+        async with drive.DriveUploader() as uploader, \
+                   HaHContext(uploader), \
+                   DiskSpaceContext(), \
+                   ServerContext(application):
+            application['uploader'] = uploader
+            await self._wait_for_finished()
+
+        self._loop.stop()
 
     def _close_from_signal(self):
-        self._loop.add_callback_from_signal(self._aclose)
+        self._finished.set()
 
-    async def _aclose(self):
-        if self._hah_listener:
-            self._hah_listener.close()
-        if self._disk_space_listener:
-            self._disk_space_listener.close()
-        await self._uploader.close()
-        self._loop.stop()
+    async def _wait_for_finished(self):
+        await self._finished.wait()
+
+
+class HaHContext(object):
+
+    def __init__(self, uploader):
+        tmp = settings['hah']
+        if not tmp:
+            self._listener = None
+        else:
+            self._listener = hah.HaHListener(tmp['log_path'],
+                                             tmp['download_path'],
+                                             settings['upload_to'],
+                                             uploader)
+
+    async def __aenter__(self):
+        if self._listener:
+            self._listener.start()
+        return self._listener
+
+    async def __aexit__(self, exc_type, exc, tb):
+        if self._listener:
+            self._listener.stop()
+
+
+class DiskSpaceContext(object):
+
+    def __init__(self):
+        if settings['reserved_space_in_gb']:
+            self._listener = torrent.DiskSpaceListener()
+        else:
+            self._listener = None
+
+    async def __aenter__(self):
+        if self._listener:
+            self._listener.start()
+        return self._listener
+
+    async def __aexit__(self, exc_type, exc, tb):
+        if self._listener:
+            self._listener.stop()
+
+
+class ServerContext(object):
+
+    def __init__(self, app):
+        self._runner = aw.AppRunner(app)
+
+    async def __aenter__(self):
+        await self._runner.setup()
+        site = aw.TCPSite(self._runner, port=settings['port'])
+        await site.start()
+        return self._runner
+
+    async def __aexit__(self, exc_type, exc, tb):
+        await self._runner.cleanup()
 
 
 def parse_args(args):
