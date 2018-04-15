@@ -1,3 +1,4 @@
+import asyncio
 import functools as ft
 import hashlib
 import json
@@ -7,7 +8,6 @@ import pathlib
 import re
 import threading
 
-from tornado import locks as tl
 import wcpan.drive.google as wdg
 from wcpan.logger import DEBUG, INFO, ERROR, EXCEPTION, WARNING
 import wcpan.worker as ww
@@ -21,19 +21,21 @@ off_main_thread = ww.off_main_thread_method('_pool')
 class DriveUploader(object):
 
     def __init__(self):
-        self._drive = wdg.Drive(op.expanduser('~/.cache/wcpan/drive/google'))
-        self._sync_lock = tl.Lock()
+        path = op.expanduser('~/.cache/wcpan/drive/google')
+        self._drive = wdg.Drive(path)
+        self._sync_lock = asyncio.Lock()
         self._queue = ww.AsyncQueue(8)
         self._pool = ww.create_thread_pool()
 
-    async def initialize(self):
-        await self._drive.initialize()
+    async def __aenter__(self):
+        await self._drive.__aenter__()
         self._queue.start()
+        return self
 
-    async def close(self):
+    async def __aexit__(self, exc_type, exc, tb):
         self._pool.shutdown()
         await self._queue.stop()
-        self._drive.close()
+        await self._drive.__aexit__(exc_type, exc, tb)
 
     async def upload_path(self, remote_path, local_path):
         async with self._sync_lock:
