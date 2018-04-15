@@ -1,3 +1,4 @@
+import asyncio
 import glob
 import os
 import os.path as op
@@ -5,7 +6,6 @@ import pathlib
 import re
 import shutil
 
-from tornado import ioloop as ti
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 from wcpan.logger import DEBUG, ERROR
@@ -22,7 +22,7 @@ class HaHEventHandler(PatternMatchingEventHandler):
         self._upload_path = upload_path
         self._uploader = uploader
         self._index = op.getsize(log_path)
-        self._loop = ti.IOLoop.current()
+        self._loop = asyncio.get_event_loop()
         self._lines = []
 
     def on_modified(self, event):
@@ -65,7 +65,7 @@ class HaHEventHandler(PatternMatchingEventHandler):
         if len(paths) != 1:
             ERROR('duld') << '(hah)' << name << 'has multiple target' << paths
             return
-        self._loop.add_callback(self._upload, paths[0])
+        self._loop.create_task(self._upload(paths[0]))
 
     async def _upload(self, path):
         DEBUG('duld') << 'hah upload' << path
@@ -77,13 +77,14 @@ class HaHEventHandler(PatternMatchingEventHandler):
 class HaHListener(object):
 
     def __init__(self, log_path, download_path, upload_path, uploader):
-        handler = HaHEventHandler(op.join(log_path, 'log_out'), download_path, upload_path, uploader)
+        path = op.join(log_path, 'log_out')
+        handler = HaHEventHandler(path, download_path, upload_path, uploader)
         self._observer = Observer()
         self._observer.schedule(handler, log_path)
+
+    def start(self):
         self._observer.start()
 
     def close(self):
-        if self._observer:
-            self._observer.stop()
-            self._observer.join()
-            self._observer = None
+        self._observer.stop()
+        self._observer.join()
