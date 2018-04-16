@@ -4,7 +4,7 @@ import signal
 import sys
 
 from aiohttp import web as aw
-from wcpan.logger import setup as setup_logger
+from wcpan.logger import setup as setup_logger, EXCEPTION
 
 from . import api, drive, hah, settings, torrent
 
@@ -34,6 +34,8 @@ class Daemon(object):
     async def _guard(self):
         try:
             return self._main()
+        except Exception as e:
+            EXCEPTION('duld', e)
         finally:
             self._loop.stop()
         return 1
