@@ -33,7 +33,7 @@ class Daemon(object):
 
     async def _guard(self):
         try:
-            return self._main()
+            return await self._main()
         except Exception as e:
             EXCEPTION('duld', e)
         finally:
