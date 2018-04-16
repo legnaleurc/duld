@@ -46,7 +46,7 @@ class Daemon(object):
         app.router.add_view(r'/api/v1/torrents', api.TorrentsHandler)
         app.router.add_view(r'/api/v1/torrents/{torrent_id:\d+}', api.TorrentsHandler)
 
-        async with UploaderContext(), \
+        async with UploaderContext(app) as uploader, \
                    HaHContext(uploader), \
                    DiskSpaceContext(), \
                    ServerContext(app):
