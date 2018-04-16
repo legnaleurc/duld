@@ -1,7 +1,6 @@
 PyYAML
-tornado
+aiohttp >= 3
 transmissionrpc
 watchdog
-wcpan.drive.google
-wcpan.listen
+wcpan.drive.google >= 2
 wcpan.logger
