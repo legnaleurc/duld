@@ -92,7 +92,7 @@ class DriveUploader(object):
         dir_name = local_path.name
 
         # find or create remote directory
-        child_node = await self._drive.get_child(node, dir_name)
+        child_node = await self._drive.get_child_by_name_from_parent(dir_name, node)
         if child_node and child_node.is_file:
             # is file
             path = await self._drive.get_path(child_node)
@@ -141,7 +141,7 @@ class DriveUploader(object):
         remote_path = await self._drive.get_path(node)
         remote_path = pathlib.Path(remote_path, file_name)
 
-        child_node = await self._drive.get_child(node, file_name)
+        child_node = await self._drive.get_child_by_name_from_parent(file_name, node)
 
         if child_node and child_node.is_available:
             if child_node.is_folder:
