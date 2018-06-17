@@ -1,5 +1,6 @@
 PyYAML
 aiohttp >= 3
+async-exit-stack
 transmissionrpc
 watchdog
 wcpan.drive.google >= 2

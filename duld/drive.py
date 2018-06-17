@@ -1,4 +1,5 @@
 import asyncio
+import concurrent.futures as cf
 import functools as ft
 import hashlib
 import json
@@ -8,14 +9,12 @@ import pathlib
 import re
 import threading
 
+import async_exit_stack as aes
 import wcpan.drive.google as wdg
 from wcpan.logger import DEBUG, INFO, ERROR, EXCEPTION, WARNING
 import wcpan.worker as ww
 
 from . import settings
-
-
-off_main_thread = ww.off_main_thread_method('_pool')
 
 
 class DriveUploader(object):
@@ -25,17 +24,23 @@ class DriveUploader(object):
         self._drive = wdg.Drive(path)
         self._sync_lock = asyncio.Lock()
         self._queue = ww.AsyncQueue(8)
-        self._pool = ww.create_thread_pool()
+        self._loop = asyncio.get_event_loop()
+        self._pool = None
+        self._raii = None
 
     async def __aenter__(self):
-        await self._drive.__aenter__()
-        self._queue.start()
+        async with aes.AsyncExitStack() as stack:
+            await stack.enter_async_context(self._drive)
+            self._queue.start()
+            self._pool = cf.ProcessPoolExecutor()
+            self._raii = stack.pop_all()
         return self
 
-    async def __aexit__(self, exc_type, exc, tb):
+    async def __aexit__(self, type_, value, traceback):
         self._pool.shutdown()
         await self._queue.stop()
-        await self._drive.__aexit__(exc_type, exc, tb)
+        await self._raii.aclose()
+        self._raii = None
 
     async def upload_path(self, remote_path, local_path):
         async with self._sync_lock:
@@ -166,9 +171,9 @@ class DriveUploader(object):
 
         return True
 
-    @off_main_thread
-    def _verify_remote_file(self, local_path, remote_path, remote_md5):
-        local_md5 = md5sum(local_path)
+    async def _verify_remote_file(self, local_path, remote_path, remote_md5):
+        local_md5 = await self._loop.run_in_executor(self._pool, md5sum,
+                                                     local_path)
         if local_md5 != remote_md5:
             ERROR('duld') << '(remote)' << remote_path << 'has a different md5 ({0}, {1})'.format(local_md5, remote_md5)
             return False
@@ -185,7 +190,6 @@ class DriveUploader(object):
 
 
 def md5sum(path):
-    assert threading.current_thread() is not threading.main_thread()
     hasher = hashlib.md5()
     with path.open('rb') as fin:
         while True:
