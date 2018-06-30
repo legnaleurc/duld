@@ -193,7 +193,7 @@ class DriveUploader(object):
             EXCEPTION('duld', e)
         return False
 
-    async def _should_exclude(name):
+    async def _should_exclude(self, name):
         for pattern in settings['exclude_pattern']:
             if re.match(pattern, name, re.IGNORECASE):
                 return True
