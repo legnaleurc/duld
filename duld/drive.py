@@ -201,7 +201,7 @@ class DriveUploader(object):
         if settings['exclude_url']:
             async with self._curl.get(settings['exclude_url']) as rv:
                 rv = await rv.json()
-                for _, pattern in rv:
+                for _, pattern in rv.items():
                     if re.match(pattern, name, re.IGNORECASE):
                         return True
 
