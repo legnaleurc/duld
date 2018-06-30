@@ -17,7 +17,7 @@ class TorrentsHandler(aw.View):
             loop.create_task(f)
         result = json.dumps([_.id for _ in torrents])
         result = result + '\n'
-        return aw.Response(text=result)
+        return aw.Response(text=result, content_type='application/json')
 
     async def put(self):
         torrent_id = self.request.match_info['torrent_id']
