@@ -3,6 +3,9 @@ port: 1234
 # wont upload these files
 exclude_pattern:
   - ^.*padding_file.*BitComet.*$
+# dynamic exclude pattern
+exclude_url:
+  - http://dld/api/v1/filters
 # the upload directory on remote drive
 upload_to: /tmp
 # daemon log file path

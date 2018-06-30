@@ -9,6 +9,7 @@ import pathlib
 import re
 import threading
 
+import aiohttp
 import async_exit_stack as aes
 import wcpan.drive.google as wdg
 from wcpan.logger import DEBUG, INFO, ERROR, EXCEPTION, WARNING
@@ -25,6 +26,7 @@ class DriveUploader(object):
         self._sync_lock = asyncio.Lock()
         self._queue = ww.AsyncQueue(8)
         self._loop = asyncio.get_event_loop()
+        self._curl = None
         self._pool = None
         self._raii = None
 
@@ -32,6 +34,7 @@ class DriveUploader(object):
         async with aes.AsyncExitStack() as stack:
             await stack.enter_async_context(self._drive)
             self._queue.start()
+            self._curl = await stack.enter_async_context(aiohttp.ClientSession())
             self._pool = cf.ProcessPoolExecutor()
             self._raii = stack.pop_all()
         return self
@@ -40,6 +43,8 @@ class DriveUploader(object):
         self._pool.shutdown()
         await self._queue.stop()
         await self._raii.aclose()
+        self._curl = None
+        self._pool = None
         self._raii = None
 
     async def upload_path(self, remote_path, local_path):
@@ -83,7 +88,7 @@ class DriveUploader(object):
         return all_ok
 
     async def _upload(self, node, local_path):
-        if should_exclude(local_path.name):
+        if await self._should_exclude(local_path.name):
             INFO('duld') << 'excluded' << local_path
             return True
 
@@ -188,6 +193,20 @@ class DriveUploader(object):
             EXCEPTION('duld', e)
         return False
 
+    async def _should_exclude(name):
+        for pattern in settings['exclude_pattern']:
+            if re.match(pattern, name, re.IGNORECASE):
+                return True
+
+        if settings['exclude_url']:
+            async with self._curl.get(settings['exclude_url']) as rv:
+                rv = await rv.json()
+                for _, pattern in rv:
+                    if re.match(pattern, name, re.IGNORECASE):
+                        return True
+
+        return False
+
 
 def md5sum(path):
     hasher = hashlib.md5()
@@ -198,10 +217,3 @@ def md5sum(path):
                 break
             hasher.update(chunk)
     return hasher.hexdigest()
-
-
-def should_exclude(name):
-    for pattern in settings['exclude_pattern']:
-        if re.match(pattern, name, re.IGNORECASE):
-            return True
-    return False
