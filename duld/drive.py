@@ -10,7 +10,6 @@ import re
 import threading
 
 import aiohttp
-import async_exit_stack as aes
 import wcpan.drive.google as wdg
 from wcpan.logger import DEBUG, INFO, ERROR, EXCEPTION, WARNING
 import wcpan.worker as ww
@@ -31,16 +30,15 @@ class DriveUploader(object):
         self._raii = None
 
     async def __aenter__(self):
-        async with aes.AsyncExitStack() as stack:
+        async with cl.AsyncExitStack() as stack:
             await stack.enter_async_context(self._drive)
             self._queue.start()
             self._curl = await stack.enter_async_context(aiohttp.ClientSession())
-            self._pool = cf.ProcessPoolExecutor()
+            self._pool = stack.enter_context(cf.ProcessPoolExecutor())
             self._raii = stack.pop_all()
         return self
 
     async def __aexit__(self, type_, value, traceback):
-        self._pool.shutdown()
         await self._queue.stop()
         await self._raii.aclose()
         self._curl = None
