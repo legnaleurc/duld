@@ -130,7 +130,7 @@ class DriveUploader(object):
         while True:
             try:
                 ok = await self._upload_file(node, local_path)
-            except wdg.UploadConflictedError as e:
+            except wdg.UploadError as e:
                 ok = await self._try_resolve_name_confliction(e.node)
                 if not ok:
                     ERROR('duld') << 'cannot resolve conclict for {0}, remote id: {1}'.format(local_path, e.node.id_)
