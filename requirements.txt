@@ -2,5 +2,5 @@ PyYAML
 aiohttp >= 3
 transmissionrpc
 watchdog
-wcpan.drive.google >= 2
+wcpan.drive.google ~= 3.0.0
 wcpan.logger

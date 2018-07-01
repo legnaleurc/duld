@@ -100,13 +100,13 @@ class DriveUploader(object):
         dir_name = local_path.name
 
         # find or create remote directory
-        child_node = await self._drive.get_child_by_name_from_parent(dir_name, node)
+        child_node = await self._drive.get_node_by_name_from_parent(dir_name, node)
         if child_node and child_node.is_file:
             # is file
             path = await self._drive.get_path(child_node)
             ERROR('duld') << '(remote)' << path << 'is a file'
             return False
-        elif not child_node or not child_node.is_available or not node.is_available:
+        elif not child_node or child_node.trashed or node.trashed:
             # not exists
             child_node = await self._drive.create_folder(node, dir_name)
             if not child_node:
@@ -149,9 +149,9 @@ class DriveUploader(object):
         remote_path = await self._drive.get_path(node)
         remote_path = pathlib.Path(remote_path, file_name)
 
-        child_node = await self._drive.get_child_by_name_from_parent(file_name, node)
+        child_node = await self._drive.get_node_by_name_from_parent(file_name, node)
 
-        if child_node and child_node.is_available:
+        if child_node and not child_node.trashed:
             if child_node.is_folder:
                 ERROR('duld') << '(remote)' << remote_path << 'is a directory'
                 return False
@@ -162,7 +162,7 @@ class DriveUploader(object):
                 return False
             INFO('duld') << remote_path << 'already exists'
 
-        if not child_node or not child_node.is_available:
+        if not child_node or child_node.trashed:
             INFO('duld') << 'uploading' << remote_path
 
             child_node = await self._drive.upload_file(str(local_path), node)
@@ -185,7 +185,7 @@ class DriveUploader(object):
     # used in exception handler, DO NOT throw another exception again
     async def _try_resolve_name_confliction(self, node, local_path):
         name = op.basename(local_path)
-        node = self._drive.get_child_by_name_from_parent(name, node)
+        node = self._drive.get_node_by_name_from_parent(name, node)
         if not node:
             return True
         try:
