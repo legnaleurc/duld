@@ -72,7 +72,7 @@ async def upload_torrent(uploader, torrent_id):
         EXCEPTION('duld', e)
     if not ok:
         INFO('duld') << '{0}: upload failed'.format(torrent_name)
-        INFO('duld') << 'retry url: /torrents/{0}'.format(torrent_id)
+        INFO('duld') << 'retry url: /api/v1/torrents/{0}'.format(torrent_id)
         return
 
     INFO('duld') << '{0}: remove torrent'.format(torrent_name)
