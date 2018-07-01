@@ -131,7 +131,7 @@ class DriveUploader(object):
             try:
                 ok = await self._upload_file(node, local_path)
             except wdg.UploadError as e:
-                ok = await self._try_resolve_name_confliction(e.node)
+                ok = await self._try_resolve_name_confliction(node, local_path)
                 if not ok:
                     ERROR('duld') << 'cannot resolve conclict for {0}, remote id: {1}'.format(local_path, e.node.id_)
                     return False
@@ -185,7 +185,11 @@ class DriveUploader(object):
         return True
 
     # used in exception handler, DO NOT throw another exception again
-    async def _try_resolve_name_confliction(self, node):
+    async def _try_resolve_name_confliction(self, node, local_path):
+        name = op.basename(local_path)
+        node = self._drive.get_child_by_name_from_parent(name, node)
+        if not node:
+            return True
         try:
             ok = await self._drive.trash_node_by_id(node.id_)
             return ok
