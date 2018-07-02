@@ -64,7 +64,7 @@ async def upload_torrent(uploader, torrent_id):
 
     INFO('duld') << '{0}: begin uploading'.format(torrent_name)
     torrent_root = torrent.downloadDir
-    # upload files to Amazon Cloud Drive
+    # upload files to Cloud Drive
     ok = False
     try:
         ok = await uploader.upload_torrent(settings['upload_to'], torrent_root, root_items)
