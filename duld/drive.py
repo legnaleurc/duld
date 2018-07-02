@@ -182,7 +182,7 @@ class DriveUploader(object):
     # used in exception handler, DO NOT throw another exception again
     async def _try_resolve_name_confliction(self, node, local_path):
         name = op.basename(local_path)
-        node = self._drive.get_child_by_name_from_parent(name, node)
+        node = await self._drive.get_child_by_name_from_parent(name, node)
         if not node:
             return True
         try:
