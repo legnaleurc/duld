@@ -132,7 +132,7 @@ class DriveUploader(object):
             except wdg.UploadError as e:
                 ok = await self._try_resolve_name_confliction(node, local_path)
                 if not ok:
-                    ERROR('duld') << 'cannot resolve conclict for {0}, remote id: {1}'.format(local_path, e.node.id_)
+                    ERROR('duld') << 'cannot resolve conclict for {0}'.format(local_path)
                     return False
             except Exception as e:
                 WARNING('duld') << 'retry because' << str(e)
