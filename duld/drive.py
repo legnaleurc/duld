@@ -91,8 +91,6 @@ class DriveUploader(object):
             INFO('duld') << 'excluded' << local_path
             return True
 
-        INFO('duld') << 'uploading' << local_path
-
         if local_path.is_dir():
             ok = await self._upload_directory(node, local_path)
         else:
