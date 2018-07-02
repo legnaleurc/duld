@@ -134,6 +134,7 @@ class DriveUploader(object):
                 if not ok:
                     ERROR('duld') << 'cannot resolve conclict for {0}'.format(local_path)
                     return False
+                WARNING('duld') << 'retry because' << str(e)
             except Exception as e:
                 WARNING('duld') << 'retry because' << str(e)
             else:
