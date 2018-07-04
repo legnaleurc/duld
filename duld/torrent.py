@@ -12,19 +12,20 @@ class DiskSpaceListener(object):
 
     def __init__(self):
         self._timer = None
-        self._loop = asyncio.get_event_loop()
-        self._halted = False
 
-    def start(self):
-        # check space every minute
-        self._timer = self._loop.call_later(60, self._one)
+    def __enter__(self):
+        self._timer = asyncio.create_task(self._loop())
+        return self
 
-    def stop(self):
+    def __exit__(self, type_, exc, tb):
         self._timer.cancel()
+        self._timer = None
 
-    def _one(self):
-        self._check_space()
-        self.start()
+    async def _loop(self):
+        # check space every minute
+        while True:
+            await asyncio.sleep(60)
+            self._check_space()
 
     def _check_space(self):
         torrent_client = connect_transmission()

@@ -1,5 +1,6 @@
 import asyncio
 import argparse
+import contextlib as cl
 import signal
 import sys
 
@@ -46,10 +47,25 @@ class Daemon(object):
         app.router.add_view(r'/api/v1/torrents', api.TorrentsHandler)
         app.router.add_view(r'/api/v1/torrents/{torrent_id:\d+}', api.TorrentsHandler)
 
-        async with UploaderContext(app) as uploader, \
-                   HaHContext(uploader), \
-                   DiskSpaceContext(), \
-                   ServerContext(app):
+        async with cl.AsyncExitStack() as stack:
+            uploader = await stack.enter_async_context(drive.DriveUploader())
+
+            tmp = settings['hah']
+            if tmp:
+                stack.enter_context(
+                    hah.HaHListener(
+                        tmp['log_path'],
+                        tmp['download_path'],
+                        settings['upload_to'],
+                        uploader))
+
+            if settings['reserved_space_in_gb']:
+                stack.enter_context(torrent.DiskSpaceListener())
+
+            app['uploader'] = uploader
+
+            await stack.enter_async_context(ServerContext(app))
+
             await self._wait_for_finished()
 
         return 0
@@ -59,61 +75,6 @@ class Daemon(object):
 
     async def _wait_for_finished(self):
         await self._finished.wait()
-
-
-class UploaderContext(object):
-
-    def __init__(self, app):
-        self._app = app
-        self._uploader = drive.DriveUploader()
-
-    async def __aenter__(self):
-        await self._uploader.__aenter__()
-        self._app['uploader'] = self._uploader
-        return self._uploader
-
-    async def __aexit__(self, exc_type, exc, tb):
-        await self._uploader.__aexit__(exc_type, exc, tb)
-
-
-class HaHContext(object):
-
-    def __init__(self, uploader):
-        tmp = settings['hah']
-        if not tmp:
-            self._listener = None
-        else:
-            self._listener = hah.HaHListener(tmp['log_path'],
-                                             tmp['download_path'],
-                                             settings['upload_to'],
-                                             uploader)
-
-    async def __aenter__(self):
-        if self._listener:
-            self._listener.start()
-        return self._listener
-
-    async def __aexit__(self, exc_type, exc, tb):
-        if self._listener:
-            self._listener.stop()
-
-
-class DiskSpaceContext(object):
-
-    def __init__(self):
-        if settings['reserved_space_in_gb']:
-            self._listener = torrent.DiskSpaceListener()
-        else:
-            self._listener = None
-
-    async def __aenter__(self):
-        if self._listener:
-            self._listener.start()
-        return self._listener
-
-    async def __aexit__(self, exc_type, exc, tb):
-        if self._listener:
-            self._listener.stop()
 
 
 class ServerContext(object):

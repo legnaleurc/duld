@@ -82,9 +82,10 @@ class HaHListener(object):
         self._observer = Observer()
         self._observer.schedule(handler, log_path)
 
-    def start(self):
+    def __enter__(self):
         self._observer.start()
+        return self
 
-    def close(self):
+    def __exit__(self, type_, exc, tb):
         self._observer.stop()
         self._observer.join()
