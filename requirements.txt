@@ -4,4 +4,4 @@ transmissionrpc
 watchdog
 wcpan.drive.google ~= 3.0.2
 wcpan.logger
-wcpan.worker ~= 3.0.1
+wcpan.worker ~= 3.1.0
