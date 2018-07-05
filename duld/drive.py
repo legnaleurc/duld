@@ -24,25 +24,25 @@ class DriveUploader(object):
         path = op.expanduser('~/.cache/wcpan/drive/google')
         self._drive = wdg.Drive(path)
         self._sync_lock = asyncio.Lock()
-        self._queue = ww.AsyncQueue(8)
         self._loop = asyncio.get_event_loop()
         self._curl = None
+        self._queue = None
         self._pool = None
         self._raii = None
 
     async def __aenter__(self):
         async with cl.AsyncExitStack() as stack:
             await stack.enter_async_context(self._drive)
-            self._queue.start()
+            self._queue = await stack.enter_async_context(ww.AsyncQueue(8))
             self._curl = await stack.enter_async_context(aiohttp.ClientSession())
             self._pool = stack.enter_context(cf.ProcessPoolExecutor())
             self._raii = stack.pop_all()
         return self
 
-    async def __aexit__(self, type_, value, traceback):
-        await self._queue.stop()
+    async def __aexit__(self, type_, exc, tb):
         await self._raii.aclose()
         self._curl = None
+        self._queue = None
         self._pool = None
         self._raii = None
 
