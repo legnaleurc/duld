@@ -21,10 +21,9 @@ from . import settings
 class DriveUploader(object):
 
     def __init__(self):
-        path = op.expanduser('~/.cache/wcpan/drive/google')
-        self._drive = wdg.Drive(path)
         self._sync_lock = asyncio.Lock()
         self._loop = asyncio.get_event_loop()
+        self._drive = None
         self._curl = None
         self._queue = None
         self._pool = None
@@ -32,7 +31,7 @@ class DriveUploader(object):
 
     async def __aenter__(self):
         async with cl.AsyncExitStack() as stack:
-            await stack.enter_async_context(self._drive)
+            self._drive = await stack.enter_async_context(wdg.Drive())
             self._queue = await stack.enter_async_context(ww.AsyncQueue(8))
             self._curl = await stack.enter_async_context(aiohttp.ClientSession())
             self._pool = stack.enter_context(cf.ProcessPoolExecutor())
@@ -41,6 +40,7 @@ class DriveUploader(object):
 
     async def __aexit__(self, type_, exc, tb):
         await self._raii.aclose()
+        self._drive = None
         self._curl = None
         self._queue = None
         self._pool = None
