@@ -167,7 +167,7 @@ class DriveUploader(object):
         if not child_node or child_node.trashed:
             INFO('duld') << 'uploading' << remote_path
 
-            child_node = await self._drive.upload_file(str(local_path), node)
+            child_node = await wdg.upload_from_local(drive, node, str(local_path))
 
             # check integrity
             ok = await self._verify_remote_file(local_path, remote_path, child_node.md5)
