@@ -6,17 +6,14 @@ import pathlib
 import re
 import shutil
 
-from watchdog.observers import Observer
-from watchdog.events import PatternMatchingEventHandler
+import aionotify
 from wcpan.logger import DEBUG, ERROR
 
 
-class HaHEventHandler(PatternMatchingEventHandler):
+class HaHEventHandler(object):
 
     def __init__(self, log_path, download_path, upload_path, uploader):
-        super(HaHEventHandler, self).__init__(patterns=[
-            log_path,
-        ])
+        super(HaHEventHandler, self).__init__()
         self._log_path = log_path
         self._download_path = pathlib.Path(download_path)
         self._upload_path = upload_path
@@ -25,7 +22,7 @@ class HaHEventHandler(PatternMatchingEventHandler):
         self._loop = asyncio.get_event_loop()
         self._lines = []
 
-    def on_modified(self, event):
+    async def on_modified(self, event):
         if op.getsize(self._log_path) < self._index:
             self._index = 0
         with open(self._log_path, 'r') as fin:
@@ -33,9 +30,9 @@ class HaHEventHandler(PatternMatchingEventHandler):
             lines = fin.readlines()
             self._index = fin.tell()
         # the log may be truncated
-        self._push_lines(lines)
+        await self._push_lines(lines)
 
-    def _push_lines(self, lines):
+    async def _push_lines(self, lines):
         self._lines.extend(lines)
         while self._lines:
             line = self._lines[0]
@@ -47,10 +44,10 @@ class HaHEventHandler(PatternMatchingEventHandler):
                     self._lines.pop(0)
                     line += self._lines[0]
 
-            self._parse_line(line)
+            await self._parse_line(line)
             self._lines.pop(0)
 
-    def _parse_line(self, line):
+    async def _parse_line(self, line):
         m = re.match(r'.*\[info\] GalleryDownloader: Finished download of gallery: (.+)\n', line)
         if not m:
             return
@@ -65,7 +62,7 @@ class HaHEventHandler(PatternMatchingEventHandler):
         if len(paths) != 1:
             ERROR('duld') << '(hah)' << name << 'has multiple target' << paths
             return
-        self._loop.create_task(self._upload(paths[0]))
+        await self._upload(paths[0])
 
     async def _upload(self, path):
         DEBUG('duld') << 'hah upload' << path
@@ -78,14 +75,21 @@ class HaHListener(object):
 
     def __init__(self, log_path, download_path, upload_path, uploader):
         path = op.join(log_path, 'log_out')
-        handler = HaHEventHandler(path, download_path, upload_path, uploader)
-        self._observer = Observer()
-        self._observer.schedule(handler, log_path)
+        self._handler = HaHEventHandler(path, download_path, upload_path, uploader)
+        self._watcher = aionotify.Watcher()
+        self._watcher.watch(alias='logs', path=log_path, flags=aionotify.Flags.MODIFY)
 
-    def __enter__(self):
-        self._observer.start()
+    async def __aenter__(self):
+        loop = asyncio.get_event_loop()
+        await self._watcher.setup(loop)
+        self._task = asyncio.create_task(self._listen())
         return self
 
-    def __exit__(self, type_, exc, tb):
-        self._observer.stop()
-        self._observer.join()
+    async def __aexit__(self, type_, exc, tb):
+        self._task.cancel()
+        self._watcher.close()
+
+    async def _listen(self):
+        while True:
+            event = await self._watcher.get_event()
+            await self._handler.on_modified(event)
