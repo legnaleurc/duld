@@ -52,7 +52,7 @@ class Daemon(object):
 
             tmp = settings['hah']
             if tmp:
-                stack.enter_context(
+                await stack.enter_async_context(
                     hah.HaHListener(
                         tmp['log_path'],
                         tmp['download_path'],
