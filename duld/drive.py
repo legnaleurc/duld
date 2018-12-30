@@ -47,9 +47,7 @@ class DriveUploader(object):
         self._raii = None
 
     async def upload_path(self, remote_path, local_path):
-        async with self._sync_lock:
-            async for changes in self._drive.sync():
-                INFO('duld') << 'sync' << len(changes)
+        await self._sync()
 
         node = await self._drive.get_node_by_path(remote_path)
         if not node:
@@ -63,9 +61,7 @@ class DriveUploader(object):
         return ok
 
     async def upload_torrent(self, remote_path, torrent_root, root_items):
-        async with self._sync_lock:
-            async for changes in self._drive.sync():
-                INFO('duld') << 'sync' << len(changes)
+        await self._sync()
 
         node = await self._drive.get_node_by_path(remote_path)
         if not node:
@@ -83,6 +79,13 @@ class DriveUploader(object):
                 continue
 
         return all_ok
+
+    async def _sync(self):
+        async with self._sync_lock:
+            count = 0
+            async for changes in self._drive.sync():
+                count += 1
+            INFO('duld') << 'sync' << count
 
     async def _upload(self, node, local_path):
         if await self._should_exclude(local_path.name):
