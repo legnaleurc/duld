@@ -28,6 +28,7 @@ class Daemon(object):
     def __call__(self):
         self._loop.create_task(self._guard())
         self._loop.add_signal_handler(signal.SIGINT, self._close_from_signal)
+        self._loop.add_signal_handler(signal.SIGTERM, self._close_from_signal)
         self._loop.run_forever()
         self._loop.close()
         return 0
