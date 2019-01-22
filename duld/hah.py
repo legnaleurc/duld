@@ -19,7 +19,6 @@ class HaHEventHandler(object):
         self._upload_path = upload_path
         self._uploader = uploader
         self._index = op.getsize(log_path)
-        self._loop = asyncio.get_event_loop()
         self._lines = []
 
     async def on_modified(self, event):
@@ -80,7 +79,7 @@ class HaHListener(object):
         self._watcher.watch(alias='logs', path=log_path, flags=aionotify.Flags.MODIFY)
 
     async def __aenter__(self):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         await self._watcher.setup(loop)
         self._task = asyncio.create_task(self._listen())
         return self

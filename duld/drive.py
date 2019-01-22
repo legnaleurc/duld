@@ -22,7 +22,6 @@ class DriveUploader(object):
 
     def __init__(self):
         self._sync_lock = asyncio.Lock()
-        self._loop = asyncio.get_event_loop()
         self._drive = None
         self._curl = None
         self._queue = None
@@ -176,8 +175,8 @@ class DriveUploader(object):
         return True
 
     async def _verify_remote_file(self, local_path, remote_path, remote_md5):
-        local_md5 = await self._loop.run_in_executor(self._pool, md5sum,
-                                                     local_path)
+        loop = asyncio.get_running_loop()
+        local_md5 = await loop.run_in_executor(self._pool, md5sum, local_path)
         if local_md5 != remote_md5:
             ERROR('duld') << '(remote)' << remote_path << 'has a different md5 ({0}, {1})'.format(local_md5, remote_md5)
             return False
