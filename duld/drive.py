@@ -116,6 +116,12 @@ class DriveUploader(object):
                 ERROR('duld') << '(remote) cannot create' << path
                 return False
 
+            # Need to update local cache for the added folder.
+            # In theory we should pass remote path instead of doing this.
+            async with self._sync_lock:
+                async for changes in self._drive.sync():
+                    INFO('duld') << 'sync' << len(changes)
+
         all_ok = True
         for child_path in local_path.iterdir():
             ok = await self._upload(child_node, child_path)
