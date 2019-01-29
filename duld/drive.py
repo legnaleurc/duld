@@ -118,9 +118,8 @@ class DriveUploader(object):
 
             # Need to update local cache for the added folder.
             # In theory we should pass remote path instead of doing this.
-            async with self._sync_lock:
-                async for changes in self._drive.sync():
-                    INFO('duld') << 'sync' << len(changes)
+            while self._drive.get_path(child_node) is None:
+                await self._sync()
 
         all_ok = True
         for child_path in local_path.iterdir():
@@ -146,9 +145,7 @@ class DriveUploader(object):
             else:
                 return ok
 
-            async with self._sync_lock:
-                async for changes in self._drive.sync():
-                    INFO('duld') << 'sync' << len(changes)
+            await self._sync()
 
     async def _upload_file(self, node, local_path):
         file_name = local_path.name
