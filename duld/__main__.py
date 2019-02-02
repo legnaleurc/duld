@@ -22,10 +22,11 @@ class Daemon(object):
             'duld',
         ), settings['log_path'])
 
-        self._finished = asyncio.Event()
+        self._finished = None
 
     async def __call__(self):
         loop = asyncio.get_running_loop()
+        self._finished = asyncio.Event()
         loop.add_signal_handler(signal.SIGINT, self._close_from_signal)
         loop.add_signal_handler(signal.SIGTERM, self._close_from_signal)
         return await self._guard()
