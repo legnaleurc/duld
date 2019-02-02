@@ -24,7 +24,7 @@ class Daemon(object):
 
         self._finished = asyncio.Event()
 
-    def __call__(self):
+    async def __call__(self):
         loop = asyncio.get_running_loop()
         loop.add_signal_handler(signal.SIGINT, self._close_from_signal)
         loop.add_signal_handler(signal.SIGTERM, self._close_from_signal)
