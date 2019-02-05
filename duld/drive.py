@@ -118,7 +118,12 @@ class DriveUploader(object):
 
             # Need to update local cache for the added folder.
             # In theory we should pass remote path instead of doing this.
-            while await self._drive.get_path(child_node) is None:
+            while True:
+                try:
+                    await self._drive.get_path(child_node)
+                    break
+                except Exception:
+                    pass
                 await self._sync()
 
         all_ok = True
