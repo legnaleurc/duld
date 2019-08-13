@@ -18,6 +18,9 @@ import wcpan.worker as ww
 from . import settings
 
 
+RETRY_TIMES = 3
+
+
 class DriveUploader(object):
 
     def __init__(self):
@@ -136,21 +139,18 @@ class DriveUploader(object):
         return all_ok
 
     async def _upload_file_retry(self, node, local_path):
-        while True:
+        for _ in range(RETRY_TIMES):
             try:
                 ok = await self._upload_file(node, local_path)
-            except wdg.UploadError as e:
-                ok = await self._try_resolve_name_confliction(node, local_path)
-                if not ok:
-                    ERROR('duld') << 'cannot resolve conclict for {0}'.format(local_path)
-                    return False
-                EXCEPTION('duld', e) << 'retry upload file'
             except Exception as e:
                 EXCEPTION('duld', e) << 'retry upload file'
             else:
                 return ok
 
             await self._sync()
+        else:
+            ERROR('duld') << f'tried upload {RETRY_TIMES} times'
+            return False
 
     async def _upload_file(self, node, local_path):
         file_name = local_path.name
