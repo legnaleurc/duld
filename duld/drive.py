@@ -24,6 +24,7 @@ RETRY_TIMES = 3
 class DriveUploader(object):
 
     def __init__(self):
+        self._jobs = set()
         self._sync_lock = asyncio.Lock()
         self._drive = None
         self._curl = None
@@ -49,38 +50,46 @@ class DriveUploader(object):
         self._raii = None
 
     async def upload_path(self, remote_path, local_path):
-        await self._sync()
-
-        node = await self._drive.get_node_by_path(remote_path)
-        if not node:
-            ERROR('duld') << remote_path << 'not found'
+        if local_path in self._jobs:
             return False
 
-        local_path = pathlib.Path(local_path)
-        ok = await self._upload(node, local_path)
-        if not ok:
-            ERROR('duld') << local_path << 'upload failed'
-        return ok
+        with job_guard(self._jobs, local_path):
+            await self._sync()
+
+            node = await self._drive.get_node_by_path(remote_path)
+            if not node:
+                ERROR('duld') << remote_path << 'not found'
+                return False
+
+            local_path = pathlib.Path(local_path)
+            ok = await self._upload(node, local_path)
+            if not ok:
+                ERROR('duld') << local_path << 'upload failed'
+            return ok
 
     async def upload_torrent(self, remote_path, torrent_root, root_items):
-        await self._sync()
-
-        node = await self._drive.get_node_by_path(remote_path)
-        if not node:
-            ERROR('duld') << remote_path << 'not found'
+        if torrent_root in self._jobs:
             return False
 
-        # files/directories to be upload
-        items = map(lambda _: pathlib.Path(torrent_root, _), root_items)
-        all_ok = True
-        for item in items:
-            ok = await self._upload(node, item)
-            if not ok:
-                ERROR('duld') << item << 'upload failed'
-                all_ok = False
-                continue
+        with job_guard(self._jobs, torrent_root):
+            await self._sync()
 
-        return all_ok
+            node = await self._drive.get_node_by_path(remote_path)
+            if not node:
+                ERROR('duld') << remote_path << 'not found'
+                return False
+
+            # files/directories to be upload
+            items = map(lambda _: pathlib.Path(torrent_root, _), root_items)
+            all_ok = True
+            for item in items:
+                ok = await self._upload(node, item)
+                if not ok:
+                    ERROR('duld') << item << 'upload failed'
+                    all_ok = False
+                    continue
+
+            return all_ok
 
     async def _sync(self):
         async with self._sync_lock:
@@ -227,3 +236,12 @@ def md5sum(path):
                 break
             hasher.update(chunk)
     return hasher.hexdigest()
+
+
+@cl.contextmanager
+def job_guard(set_, token):
+    set_.add(token)
+    try:
+        yield
+    finally:
+        set_.discard(token)
