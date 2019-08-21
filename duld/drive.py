@@ -59,7 +59,7 @@ class DriveUploader(object):
         local_path = pathlib.Path(local_path)
         ok = await self._upload(node, local_path)
         if not ok:
-            ERROR('duld') << item << 'upload failed'
+            ERROR('duld') << local_path << 'upload failed'
         return ok
 
     async def upload_torrent(self, remote_path, torrent_root, root_items):
