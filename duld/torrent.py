@@ -68,7 +68,7 @@ async def upload_torrent(uploader, torrent_id):
     # upload files to Cloud Drive
     ok = False
     try:
-        ok = await uploader.upload_torrent(settings['upload_to'], torrent_root, root_items)
+        ok = await uploader.upload_torrent(settings['upload_to'], torrent_id, torrent_root, root_items)
     except Exception as e:
         EXCEPTION('duld', e)
     if not ok:

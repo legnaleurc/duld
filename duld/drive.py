@@ -51,6 +51,7 @@ class DriveUploader(object):
 
     async def upload_path(self, remote_path, local_path):
         if local_path in self._jobs:
+            WARNING('duld') << local_path << 'is still uploading'
             return False
 
         with job_guard(self._jobs, local_path):
@@ -67,11 +68,12 @@ class DriveUploader(object):
                 ERROR('duld') << local_path << 'upload failed'
             return ok
 
-    async def upload_torrent(self, remote_path, torrent_root, root_items):
-        if torrent_root in self._jobs:
+    async def upload_torrent(self, remote_path, torrent_id, torrent_root, root_items):
+        if torrent_id in self._jobs:
+            WARNING('duld') << torrent_id << 'is still uploading'
             return False
 
-        with job_guard(self._jobs, torrent_root):
+        with job_guard(self._jobs, torrent_id):
             await self._sync()
 
             node = await self._drive.get_node_by_path(remote_path)
