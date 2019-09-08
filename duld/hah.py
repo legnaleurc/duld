@@ -42,7 +42,8 @@ class HaHContext(object):
         folders = (parse_folder_name(_) for _ in lines)
         forders = { _[0]: _[1] for _ in folders if _ }
         finished = (parse_name(_) for _ in lines)
-        finished = (forders[_] for _ in finished if _)
+        finished = (forders.get(_, None) for _ in finished if _)
+        finished = (_ for _ in finished if _)
         for real_name in finished:
             self._post_upload(real_name)
         return finished
