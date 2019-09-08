@@ -47,14 +47,13 @@ class Daemon(object):
         async with cl.AsyncExitStack() as stack:
             uploader = await stack.enter_async_context(drive.DriveUploader())
 
-            tmp = settings['hah']
-            if tmp:
-                await stack.enter_async_context(
-                    hah.HaHListener(
-                        tmp['log_path'],
-                        tmp['download_path'],
-                        settings['upload_to'],
-                        uploader))
+            hah_context = await stack.enter_async_context(
+                hah.HaHContext(
+                    settings['hah_path'],
+                    settings['upload_to'],
+                    uploader,
+                )
+            )
 
             if settings['reserved_space_in_gb']:
                 stack.enter_context(torrent.DiskSpaceListener())

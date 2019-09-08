@@ -15,9 +15,7 @@ transmission:
   port: 9091
   username:
   password:
-hah:
-  log_path: /path/to/hah/log
-  download_path: /path/to/hah/download
+hah_path: /path/to/hah
 reserved_space_in_gb:
   safe: 8
   danger: 4

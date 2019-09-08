@@ -1,4 +1,5 @@
 import asyncio
+import contextlib as cl
 import glob
 import os
 import os.path as op
@@ -8,6 +9,33 @@ import shutil
 
 import aionotify
 from wcpan.logger import DEBUG, ERROR
+
+
+class HaHContext(object):
+
+    def __init__(self, hah_path, upload_to, uploader):
+        self._hah_path = pathlib.Path(hah_path) if hah_path else None
+        self._upload_to = pathlib.Path(upload_to)
+        self._uploader = uploader
+        self._raii = None
+
+    async def __aenter__(self):
+        async with cl.AsyncExitStack() as stack:
+            if self._hah_path:
+                await stack.enter_async_context(
+                    HaHListener(
+                        self._hah_path / 'log',
+                        self._hah_path / 'download',
+                        self._upload_to,
+                        self._uploader,
+                    )
+                )
+            self._raii = stack.pop_all()
+        return self
+
+    async def __aexit__(self, type_, exc, tb):
+        await self._raii.aclose()
+        self._raii = None
 
 
 class HaHEventHandler(object):
