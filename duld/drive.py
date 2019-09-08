@@ -138,6 +138,7 @@ class DriveUploader(object):
                     break
                 except Exception:
                     pass
+                await asyncio.sleep(1)
                 await self._sync()
 
         all_ok = True
