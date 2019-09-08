@@ -127,7 +127,7 @@ class HaHEventHandler(object):
 
     async def _upload(self, path):
         DEBUG('duld') << 'hah upload' << path
-        ok = await self._uploader.upload_path(self._upload_path, str(path)):
+        ok = await self._uploader.upload_path(self._upload_path, str(path))
         if not ok:
             return
         DEBUG('duld') << 'rm -rf' << path
