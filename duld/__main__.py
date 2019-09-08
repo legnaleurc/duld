@@ -59,6 +59,7 @@ class Daemon(object):
                 stack.enter_context(torrent.DiskSpaceListener())
 
             app['uploader'] = uploader
+            app['hah'] = hah_context
 
             await stack.enter_async_context(ServerContext(app))
 

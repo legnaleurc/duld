@@ -37,6 +37,31 @@ class HaHContext(object):
         await self._raii.aclose()
         self._raii = None
 
+    def scan_finished(self):
+        lines = self._get_logs()
+        folders = (parse_folder_name(_) for _ in lines)
+        forders = { _ for _ in folders if _ }
+        finished = (parse_name(_) for _ in lines)
+        finished = (forders[_] for _ in finished if _)
+        for real_name in finished:
+            self._post_upload(real_name)
+        return finished
+
+    def _get_logs(self):
+        old_lines = lines_from_path(self._hah_path / 'log' / 'log_out.old')
+        lines = lines_from_path(self._hah_path / 'log' / 'log_out')
+        return old_lines + lines
+
+    def _post_upload(self, real_name):
+        f = self._upload(self._hah_path / 'download' / real_name)
+        asyncio.create_task(f)
+
+    async def _upload(self, path):
+        DEBUG('duld') << 'hah upload' << path
+        await self._uploader.upload_path(self._upload_to, str(path))
+        DEBUG('duld') << 'rm -rf' << path
+        shutil.rmtree(str(path), ignore_errors=True)
+
 
 class HaHEventHandler(object):
 
@@ -120,3 +145,27 @@ class HaHListener(object):
         while True:
             event = await self._watcher.get_event()
             await self._handler.on_modified(event)
+
+
+def lines_from_path(path):
+    with open(path, 'r') as fin:
+        return list(fin.readlines())
+
+
+def parse_folder_name(line):
+    rv = re.search(r'Created directory download/(.*)', line)
+    if not rv:
+        return None
+    real_name = rv.group(1)
+    rv = re.match(r'^(.*) \[\d+\]$', real_name)
+    if not rv:
+        return None
+    name = rv.group(1)
+    return (name, real_name)
+
+
+def parse_name(line):
+    rv = re.search(r'Finished download of gallery: (.*)', line)
+    if not rv:
+        return None
+    return rv.group(1)

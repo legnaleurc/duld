@@ -27,3 +27,13 @@ class TorrentsHandler(aw.View):
         f = torrent.upload_torrent(uploader, torrent_id)
         asyncio.create_task(f)
         return aw.Response(status=204)
+
+
+class HaHHandler(aw.View):
+
+    async def post(self):
+        hah_context = self.request.app['hah']
+        folders = hah_context.scan_finished()
+        result = json.dumps(folders)
+        result = result + '\n'
+        return aw.Response(text=result, content_type='application/json')
