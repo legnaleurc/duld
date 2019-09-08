@@ -43,6 +43,7 @@ class Daemon(object):
 
         app.router.add_view(r'/api/v1/torrents', api.TorrentsHandler)
         app.router.add_view(r'/api/v1/torrents/{torrent_id:\d+}', api.TorrentsHandler)
+        app.router.add_view(r'/api/v1/hah', api.HaHHandler)
 
         async with cl.AsyncExitStack() as stack:
             uploader = await stack.enter_async_context(drive.DriveUploader())
