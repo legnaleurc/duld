@@ -44,8 +44,10 @@ class HaHContext(object):
         finished = (parse_name(_) for _ in lines)
         finished = (forders.get(_, None) for _ in finished if _)
         finished = [_ for _ in finished if _]
-        for real_name in finished:
-            self._post_upload(real_name)
+
+        f = self._upload_all(finished)
+        asyncio.create_task(f)
+
         return finished
 
     def _get_logs(self):
@@ -53,9 +55,13 @@ class HaHContext(object):
         lines = lines_from_path(self._hah_path / 'log' / 'log_out')
         return old_lines + lines
 
-    def _post_upload(self, real_name):
-        f = self._upload(self._hah_path / 'download' / real_name)
-        asyncio.create_task(f)
+    async def _upload_all(self, finished):
+        for real_name in finished:
+            try:
+                await self._upload(self._hah_path / 'download' / real_name)
+            except Exception:
+                # just skip error tasks
+                pass
 
     async def _upload(self, path):
         DEBUG('duld') << 'hah upload' << path
