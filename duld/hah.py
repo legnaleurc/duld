@@ -65,7 +65,9 @@ class HaHContext(object):
 
     async def _upload(self, path):
         DEBUG('duld') << 'hah upload' << path
-        await self._uploader.upload_path(self._upload_to, str(path))
+        ok = await self._uploader.upload_path(self._upload_to, str(path))
+        if not ok:
+            return
         DEBUG('duld') << 'rm -rf' << path
         shutil.rmtree(str(path), ignore_errors=True)
 
@@ -125,7 +127,9 @@ class HaHEventHandler(object):
 
     async def _upload(self, path):
         DEBUG('duld') << 'hah upload' << path
-        await self._uploader.upload_path(self._upload_path, str(path))
+        ok = await self._uploader.upload_path(self._upload_path, str(path)):
+        if not ok:
+            return
         DEBUG('duld') << 'rm -rf' << path
         shutil.rmtree(str(path), ignore_errors=True)
 
