@@ -129,7 +129,7 @@ class HaHListener(object):
         path = op.join(log_path, 'log_out')
         self._handler = HaHEventHandler(path, download_path, upload_path, uploader)
         self._watcher = aionotify.Watcher()
-        self._watcher.watch(alias='logs', path=log_path, flags=aionotify.Flags.MODIFY)
+        self._watcher.watch(alias='logs', path=str(log_path), flags=aionotify.Flags.MODIFY)
 
     async def __aenter__(self):
         loop = asyncio.get_running_loop()
