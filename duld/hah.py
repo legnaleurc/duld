@@ -40,7 +40,7 @@ class HaHContext(object):
     def scan_finished(self):
         lines = self._get_logs()
         folders = (parse_folder_name(_) for _ in lines)
-        forders = { _ for _ in folders if _ }
+        forders = { _[0]: _[1] for _ in folders if _ }
         finished = (parse_name(_) for _ in lines)
         finished = (forders[_] for _ in finished if _)
         for real_name in finished:
