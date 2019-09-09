@@ -58,18 +58,11 @@ class HaHContext(object):
     async def _upload_all(self, finished):
         for real_name in finished:
             try:
-                await self._upload(self._hah_path / 'download' / real_name)
+                real_path = self._hah_path / 'download' / real_name
+                await upload(self._uploader, self._upload_to, real_path)
             except Exception:
                 # just skip error tasks
                 pass
-
-    async def _upload(self, path):
-        DEBUG('duld') << 'hah upload' << path
-        ok = await self._uploader.upload_path(self._upload_to, str(path))
-        if not ok:
-            return
-        DEBUG('duld') << 'rm -rf' << path
-        shutil.rmtree(str(path), ignore_errors=True)
 
 
 class HaHEventHandler(object):
@@ -123,15 +116,8 @@ class HaHEventHandler(object):
         if len(paths) != 1:
             ERROR('duld') << '(hah)' << name << 'has multiple target' << paths
             return
-        await self._upload(paths[0])
 
-    async def _upload(self, path):
-        DEBUG('duld') << 'hah upload' << path
-        ok = await self._uploader.upload_path(self._upload_path, str(path))
-        if not ok:
-            return
-        DEBUG('duld') << 'rm -rf' << path
-        shutil.rmtree(str(path), ignore_errors=True)
+        await upload(self._uploader, self._upload_path, paths[0])
 
 
 class HaHListener(object):
@@ -180,3 +166,12 @@ def parse_name(line):
     if not rv:
         return None
     return rv.group(1)
+
+
+async def upload(uploader, dst_path, src_path):
+    DEBUG('duld') << 'hah upload' << src_path
+    ok = await uploader.upload_path(dst_path, str(src_path))
+    if not ok:
+        return
+    DEBUG('duld') << 'rm -rf' << src_path
+    shutil.rmtree(str(src_path), ignore_errors=True)
