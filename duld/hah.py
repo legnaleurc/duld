@@ -169,6 +169,9 @@ def parse_name(line):
 
 
 async def upload(uploader, dst_path, src_path):
+    if not op.exists(src_path):
+        DEBUG('duld') << 'hah ignored deleted path' << src_path
+        return
     DEBUG('duld') << 'hah upload' << src_path
     ok = await uploader.upload_path(dst_path, str(src_path))
     if not ok:
