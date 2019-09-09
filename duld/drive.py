@@ -105,6 +105,10 @@ class DriveUploader(object):
             INFO('duld') << 'excluded' << local_path
             return True
 
+        if not local_path.exists():
+            WARNING('duld') << 'cannot upload non-exist path' << local_path
+            return False
+
         if local_path.is_dir():
             ok = await self._upload_directory(node, local_path)
         else:
