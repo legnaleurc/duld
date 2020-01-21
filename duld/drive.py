@@ -2,7 +2,6 @@ import asyncio
 import concurrent.futures as cf
 import contextlib as cl
 import functools as ft
-import hashlib
 import json
 import multiprocessing as mp
 import os.path as op
@@ -11,7 +10,9 @@ import re
 import threading
 
 import aiohttp
-import wcpan.drive.google as wdg
+from wcpan.drive.cli.util import get_media_info
+from wcpan.drive.core.drive import DriveFactory
+from wcpan.drive.core.util import upload_from_local
 from wcpan.logger import DEBUG, INFO, ERROR, EXCEPTION, WARNING
 import wcpan.worker as ww
 
@@ -34,7 +35,9 @@ class DriveUploader(object):
 
     async def __aenter__(self):
         async with cl.AsyncExitStack() as stack:
-            self._drive = await stack.enter_async_context(wdg.Drive())
+            factory = DriveFactory()
+            factory.load_config()
+            self._drive = await stack.enter_async_context(factory())
             self._queue = await stack.enter_async_context(ww.AsyncQueue(8))
             self._curl = await stack.enter_async_context(aiohttp.ClientSession())
             self._pool = stack.enter_context(cf.ProcessPoolExecutor())
@@ -181,7 +184,7 @@ class DriveUploader(object):
                 return False
 
             # check integrity
-            ok = await self._verify_remote_file(local_path, remote_path, child_node.md5)
+            ok = await self._verify_remote_file(local_path, remote_path, child_node.hash_)
             if not ok:
                 return False
             INFO('duld') << remote_path << 'already exists'
@@ -189,20 +192,32 @@ class DriveUploader(object):
         if not child_node or child_node.trashed:
             INFO('duld') << 'uploading' << remote_path
 
-            child_node = await wdg.upload_from_local(self._drive, node, str(local_path))
+            media_info = await get_media_info(local_path)
+            child_node = await upload_from_local(
+                self._drive,
+                node,
+                local_path,
+                media_info,
+            )
 
             # check integrity
-            ok = await self._verify_remote_file(local_path, remote_path, child_node.md5)
+            ok = await self._verify_remote_file(local_path, remote_path, child_node.hash_)
             if not ok:
                 return False
 
         return True
 
-    async def _verify_remote_file(self, local_path, remote_path, remote_md5):
+    async def _verify_remote_file(self, local_path, remote_path, remote_hash):
         loop = asyncio.get_running_loop()
-        local_md5 = await loop.run_in_executor(self._pool, md5sum, local_path)
-        if local_md5 != remote_md5:
-            ERROR('duld') << '(remote)' << remote_path << 'has a different md5 ({0}, {1})'.format(local_md5, remote_md5)
+        hasher = await self._drive.get_hasher()
+        local_hash = await loop.run_in_executor(
+            self._pool,
+            md5sum,
+            hasher,
+            local_path,
+        )
+        if local_hash != remote_hash:
+            ERROR('duld') << f'(remote) {remote_path} has a different hash ({local_hash}, {remote_hash})'
             return False
         return True
 
@@ -213,8 +228,8 @@ class DriveUploader(object):
         if not node:
             return True
         try:
-            ok = await self._drive.trash_node_by_id(node.id_)
-            return ok
+            await self._drive.trash_node_by_id(node.id_)
+            return True
         except Exception as e:
             EXCEPTION('duld', e)
         return False
@@ -234,8 +249,7 @@ class DriveUploader(object):
         return False
 
 
-def md5sum(path):
-    hasher = hashlib.md5()
+def md5sum(hasher, path):
     with path.open('rb') as fin:
         while True:
             chunk = fin.read(65536)
