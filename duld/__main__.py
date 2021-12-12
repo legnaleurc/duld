@@ -1,10 +1,10 @@
 import asyncio
 import argparse
-import contextlib as cl
 import signal
 import sys
+from contextlib import AsyncExitStack
 
-from aiohttp import web as aw
+from aiohttp.web import Application, AppRunner, TCPSite
 from wcpan.logger import setup as setup_logger, EXCEPTION
 
 from . import api, drive, hah, settings, torrent
@@ -18,7 +18,6 @@ class Daemon(object):
         setup_logger((
             'aiohttp',
             'wcpan.drive.google',
-            'wcpan.worker',
             'duld',
         ), settings['log_path'])
 
@@ -39,13 +38,13 @@ class Daemon(object):
         return 1
 
     async def _main(self):
-        app = aw.Application()
+        app = Application()
 
         app.router.add_view(r'/api/v1/torrents', api.TorrentsHandler)
         app.router.add_view(r'/api/v1/torrents/{torrent_id:\d+}', api.TorrentsHandler)
         app.router.add_view(r'/api/v1/hah', api.HaHHandler)
 
-        async with cl.AsyncExitStack() as stack:
+        async with AsyncExitStack() as stack:
             uploader = await stack.enter_async_context(drive.DriveUploader())
 
             hah_context = await stack.enter_async_context(
@@ -78,11 +77,11 @@ class Daemon(object):
 class ServerContext(object):
 
     def __init__(self, app):
-        self._runner = aw.AppRunner(app)
+        self._runner = AppRunner(app)
 
     async def __aenter__(self):
         await self._runner.setup()
-        site = aw.TCPSite(self._runner, host='127.0.0.1', port=settings['port'])
+        site = TCPSite(self._runner, host='127.0.0.1', port=settings['port'])
         await site.start()
         return self._runner
 

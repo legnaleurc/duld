@@ -1,11 +1,11 @@
 import asyncio
-import os
-import os.path as op
+import os.path
 
 import transmissionrpc
 from wcpan.logger import DEBUG, INFO, WARNING, EXCEPTION
 
 from . import settings
+from .drive import DriveUploader
 
 
 class DiskSpaceListener(object):
@@ -48,7 +48,7 @@ class DiskSpaceListener(object):
             return
 
 
-async def upload_torrent(uploader, torrent_id):
+async def upload_torrent(uploader: DriveUploader, torrent_id: str):
     torrent_client = connect_transmission()
     torrent = torrent_client.get_torrent(torrent_id)
     if not torrent:
@@ -106,13 +106,13 @@ def remove_torrent(client, torrent_id):
     client.remove_torrent(torrent_id, delete_data=True)
 
 
-def split_all(path):
+def split_all(path: str):
     '''
     Returns path parts by directories.
     '''
     allparts = []
     while True:
-        parts = op.split(path)
+        parts = os.path.split(path)
         if parts[0] == path:  # sentinel for absolute paths
             allparts.insert(0, parts[0])
             break

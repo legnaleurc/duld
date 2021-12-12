@@ -1,26 +1,27 @@
 import asyncio
-import contextlib as cl
 import glob
 import os
-import os.path as op
-import pathlib
 import re
 import shutil
+from contextlib import AsyncExitStack
+from pathlib import Path
 
 import aionotify
 from wcpan.logger import DEBUG, ERROR
 
+from .drive import DriveUploader
+
 
 class HaHContext(object):
 
-    def __init__(self, hah_path, upload_to, uploader):
-        self._hah_path = pathlib.Path(hah_path) if hah_path else None
-        self._upload_to = pathlib.Path(upload_to)
+    def __init__(self, hah_path: str, upload_to: str, uploader: DriveUploader):
+        self._hah_path = Path(hah_path) if hah_path else None
+        self._upload_to = Path(upload_to)
         self._uploader = uploader
         self._raii = None
 
     async def __aenter__(self):
-        async with cl.AsyncExitStack() as stack:
+        async with AsyncExitStack() as stack:
             if self._hah_path:
                 await stack.enter_async_context(
                     HaHListener(
@@ -55,7 +56,7 @@ class HaHContext(object):
         lines = lines_from_path(self._hah_path / 'log' / 'log_out')
         return old_lines + lines
 
-    async def _upload_all(self, finished):
+    async def _upload_all(self, finished: list[str]):
         for real_name in finished:
             try:
                 real_path = self._hah_path / 'download' / real_name
@@ -67,17 +68,21 @@ class HaHContext(object):
 
 class HaHEventHandler(object):
 
-    def __init__(self, log_path, download_path, upload_path, uploader):
-        super(HaHEventHandler, self).__init__()
+    def __init__(self,
+        log_path: Path,
+        download_path: Path,
+        upload_path: Path,
+        uploader: DriveUploader,
+    ):
         self._log_path = log_path
-        self._download_path = pathlib.Path(download_path)
+        self._download_path = download_path
         self._upload_path = upload_path
         self._uploader = uploader
-        self._index = op.getsize(log_path)
+        self._index = log_path.stat().st_size
         self._lines = []
 
     async def on_modified(self, event):
-        if op.getsize(self._log_path) < self._index:
+        if self._log_path.stat().st_size < self._index:
             self._index = 0
         with open(self._log_path, 'r') as fin:
             fin.seek(self._index, os.SEEK_SET)
@@ -122,8 +127,13 @@ class HaHEventHandler(object):
 
 class HaHListener(object):
 
-    def __init__(self, log_path, download_path, upload_path, uploader):
-        path = op.join(log_path, 'log_out')
+    def __init__(self,
+        log_path: Path,
+        download_path: Path,
+        upload_path: Path,
+        uploader: DriveUploader,
+    ):
+        path = log_path / 'log_out'
         self._handler = HaHEventHandler(path, download_path, upload_path, uploader)
         self._watcher = aionotify.Watcher()
         self._watcher.watch(alias='logs', path=str(log_path), flags=aionotify.Flags.MODIFY)
@@ -144,12 +154,12 @@ class HaHListener(object):
             await self._handler.on_modified(event)
 
 
-def lines_from_path(path):
+def lines_from_path(path: Path):
     with open(path, 'r') as fin:
         return list(fin.readlines())
 
 
-def parse_folder_name(line):
+def parse_folder_name(line: str):
     rv = re.search(r'Created directory download/(.*)', line)
     if not rv:
         return None
@@ -161,20 +171,20 @@ def parse_folder_name(line):
     return (name, real_name)
 
 
-def parse_name(line):
+def parse_name(line: str):
     rv = re.search(r'Finished download of gallery: (.*)', line)
     if not rv:
         return None
     return rv.group(1)
 
 
-async def upload(uploader, dst_path, src_path):
-    if not op.exists(src_path):
+async def upload(uploader: DriveUploader, dst_path: Path, src_path: Path):
+    if not src_path.exists():
         DEBUG('duld') << 'hah ignored deleted path' << src_path
         return
     DEBUG('duld') << 'hah upload' << src_path
-    ok = await uploader.upload_path(dst_path, str(src_path))
+    ok = await uploader.upload_path(dst_path, src_path)
     if not ok:
         return
     DEBUG('duld') << 'rm -rf' << src_path
-    shutil.rmtree(str(src_path), ignore_errors=True)
+    shutil.rmtree(src_path, ignore_errors=True)
