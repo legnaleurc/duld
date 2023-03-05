@@ -160,7 +160,7 @@ class HaHListener(object):
 
 
 @contextmanager
-async def non_blocking(coro: Coroutine):
+def non_blocking(coro: Coroutine):
     task = asyncio.create_task(coro)
     yield task
     task.cancel()
