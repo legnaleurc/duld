@@ -11,15 +11,17 @@ from . import api, drive, hah, settings, torrent
 
 
 class Daemon(object):
-
     def __init__(self, args):
         args = parse_args(args)
         settings.reload(args.settings)
-        setup_logger((
-            'aiohttp',
-            'wcpan.drive.google',
-            'duld',
-        ), settings['log_path'])
+        setup_logger(
+            (
+                "aiohttp",
+                "wcpan.drive.google",
+                "duld",
+            ),
+            settings["log_path"],
+        )
 
         self._finished = None
 
@@ -34,32 +36,32 @@ class Daemon(object):
         try:
             return await self._main()
         except Exception as e:
-            EXCEPTION('duld', e)
+            EXCEPTION("duld", e)
         return 1
 
     async def _main(self):
         app = Application()
 
-        app.router.add_view(r'/api/v1/torrents', api.TorrentsHandler)
-        app.router.add_view(r'/api/v1/torrents/{torrent_id:\d+}', api.TorrentsHandler)
-        app.router.add_view(r'/api/v1/hah', api.HaHHandler)
+        app.router.add_view(r"/api/v1/torrents", api.TorrentsHandler)
+        app.router.add_view(r"/api/v1/torrents/{torrent_id:\d+}", api.TorrentsHandler)
+        app.router.add_view(r"/api/v1/hah", api.HaHHandler)
 
         async with AsyncExitStack() as stack:
             uploader = await stack.enter_async_context(drive.DriveUploader())
 
             hah_context = await stack.enter_async_context(
                 hah.HaHContext(
-                    settings['hah_path'],
-                    settings['upload_to'],
+                    settings["hah_path"],
+                    settings["upload_to"],
                     uploader,
                 )
             )
 
-            if settings['reserved_space_in_gb']:
+            if settings["reserved_space_in_gb"]:
                 stack.enter_context(torrent.DiskSpaceListener())
 
-            app['uploader'] = uploader
-            app['hah'] = hah_context
+            app["uploader"] = uploader
+            app["hah"] = hah_context
 
             await stack.enter_async_context(ServerContext(app))
 
@@ -75,13 +77,12 @@ class Daemon(object):
 
 
 class ServerContext(object):
-
     def __init__(self, app):
         self._runner = AppRunner(app)
 
     async def __aenter__(self):
         await self._runner.setup()
-        site = TCPSite(self._runner, host='127.0.0.1', port=settings['port'])
+        site = TCPSite(self._runner, host="127.0.0.1", port=settings["port"])
         await site.start()
         return self._runner
 
@@ -90,10 +91,12 @@ class ServerContext(object):
 
 
 def parse_args(args):
-    parser = argparse.ArgumentParser(prog='duld',
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-s', '--settings', default='duld.yaml', type=str,
-                        help='settings file name')
+    parser = argparse.ArgumentParser(
+        prog="duld", formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument(
+        "-s", "--settings", default="duld.yaml", type=str, help="settings file name"
+    )
     args = parser.parse_args(args[1:])
     return args
 
