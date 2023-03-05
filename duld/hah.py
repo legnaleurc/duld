@@ -3,10 +3,11 @@ import glob
 import os
 import re
 import shutil
-from contextlib import AsyncExitStack
+from contextlib import AsyncExitStack, ExitStack, contextmanager
 from pathlib import Path
+from typing import Coroutine
 
-import aionotify
+from asyncinotify import Inotify, Mask
 from wcpan.logger import DEBUG, ERROR
 
 from .drive import DriveUploader
@@ -22,7 +23,7 @@ class HaHContext(object):
     async def __aenter__(self):
         async with AsyncExitStack() as stack:
             if self._hah_path:
-                await stack.enter_async_context(
+                stack.enter_context(
                     HaHListener(
                         self._hah_path / "log",
                         self._hah_path / "download",
@@ -134,27 +135,35 @@ class HaHListener(object):
         upload_path: Path,
         uploader: DriveUploader,
     ):
+        self._log_path = log_path
         path = log_path / "log_out"
         self._handler = HaHEventHandler(path, download_path, upload_path, uploader)
-        self._watcher = aionotify.Watcher()
-        self._watcher.watch(
-            alias="logs", path=str(log_path), flags=aionotify.Flags.MODIFY
-        )
+        self._watcher = None
+        self._raii = None
 
-    async def __aenter__(self):
-        loop = asyncio.get_running_loop()
-        await self._watcher.setup(loop)
-        self._task = asyncio.create_task(self._listen())
+    def __enter__(self):
+        with ExitStack() as stack:
+            self._watcher = stack.enter_context(Inotify())
+            self._watcher.add_watch(self._log_path, Mask.MODIFY)
+            stack.enter_context(non_blocking(self._listen()))
+            self._raii = stack.pop_all()
         return self
 
-    async def __aexit__(self, type_, exc, tb):
-        self._task.cancel()
-        self._watcher.close()
+    def __exit__(self, type_, exc, tb):
+        self._raii.close()
+        self._watcher = None
+        self._raii = None
 
     async def _listen(self):
-        while True:
-            event = await self._watcher.get_event()
+        async for event in self._watcher:
             await self._handler.on_modified(event)
+
+
+@contextmanager
+async def non_blocking(coro: Coroutine):
+    task = asyncio.create_task(coro)
+    yield task
+    task.cancel()
 
 
 def lines_from_path(path: Path):

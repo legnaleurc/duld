@@ -110,18 +110,6 @@ yarl = ">=1.0,<2.0"
 speedups = ["Brotli", "aiodns", "cchardet"]
 
 [[package]]
-name = "aionotify"
-version = "0.2.0"
-description = "Asyncio-powered inotify library"
-category = "main"
-optional = false
-python-versions = "*"
-files = [
-    {file = "aionotify-0.2.0-py3-none-any.whl", hash = "sha256:385e1becfaac2d9f4326673033d53912ef9565b6febdedbec593ee966df392c6"},
-    {file = "aionotify-0.2.0.tar.gz", hash = "sha256:64b702ad0eb115034533f9f62730a9253b79f5ff0fbf3d100c392124cdf12507"},
-]
-
-[[package]]
 name = "aiosignal"
 version = "1.3.1"
 description = "aiosignal: a list of registered asynchronous callbacks"
@@ -161,6 +149,18 @@ python-versions = ">=3.6"
 files = [
     {file = "async-timeout-4.0.2.tar.gz", hash = "sha256:2163e1640ddb52b7a8c80d0a67a08587e5d245cc9c553a74a847056bc2976b15"},
     {file = "async_timeout-4.0.2-py3-none-any.whl", hash = "sha256:8ca1e4fcf50d07413d66d1a5e416e42cfdf5851c981d679a09851a6853383b3c"},
+]
+
+[[package]]
+name = "asyncinotify"
+version = "4.0.1"
+description = "A simple optionally-async python inotify library, focused on simplicity of use and operation, and leveraging modern Python features"
+category = "main"
+optional = false
+python-versions = ">= 3.6, < 4"
+files = [
+    {file = "asyncinotify-4.0.1-py3-none-any.whl", hash = "sha256:63bd2d31883da202b2614a94332f27928910716c140fa5b27ee556e3cf11b4e7"},
+    {file = "asyncinotify-4.0.1.tar.gz", hash = "sha256:d23dffcdb3f0de8326faded04a0b219bf28be2067b255a37b6cb9d5c5e97b741"},
 ]
 
 [[package]]
@@ -885,4 +885,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "2509a115b3099d795a228c8369b52f9e80473bae3fea7c8dfbd9aa2a1ce93285"
+content-hash = "84f12dc4bcbab4ec363f703afba54e3bd312d8e2d89ddc4794e5a5026d3b7d66"
