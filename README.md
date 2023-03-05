@@ -4,8 +4,6 @@ Let Transmission and HaH upload completed torrents to Cloud Drive.
 
 ## Requirements
 
-Only supports Python 3.6 or later.
-
 You have to setup wcpan.drive first.
 
 Modify Transmission settings:
