@@ -155,8 +155,11 @@ class HaHListener(object):
         self._raii = None
 
     async def _listen(self):
-        async for event in self._watcher:
-            await self._handler.on_modified(event)
+        try:
+            async for event in self._watcher:
+                await self._handler.on_modified(event)
+        except Exception:
+            DEBUG("duld") << "inotify stopped"
 
 
 @contextmanager
