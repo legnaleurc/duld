@@ -1,4 +1,4 @@
-# ddul
+# duld
 
 Let Transmission and HaH upload completed torrents to Cloud Drive.
 
@@ -6,7 +6,7 @@ Let Transmission and HaH upload completed torrents to Cloud Drive.
 
 Only supports Python 3.6 or later.
 
-You have to setup wcpan.drive.google first.
+You have to setup wcpan.drive first.
 
 Modify Transmission settings:
 
@@ -19,12 +19,12 @@ Modify Transmission settings:
 
 Transmission must be able to execute the script, watch out permission problem.
 
-Look `ddul.example.yaml` and create your own configuration.
+Look `duld.example.yaml` and create your own configuration.
 
 ## Run Daemon
 
 ```shell
-python3 -m ddul --settings=ddul.yaml
+python3 -m duld --settings=duld.yaml
 ```
 
 ## RESTful API
