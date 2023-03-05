@@ -15,6 +15,8 @@ transmissionrpc = "^0.11"
 "wcpan.drive.core" = "^3.0"
 "wcpan.logger" = "^1.2"
 asyncinotify = "^4.0.1"
+wcpan-drive-google = "^8.1.0"
+wcpan-drive-crypt = "^3.1.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
