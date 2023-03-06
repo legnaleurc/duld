@@ -91,7 +91,8 @@ async def upload_torrent(uploader: DriveUploader, torrent_id: str):
 
 def get_completed():
     torrent_client = connect_transmission()
-    completed = filter(lambda _: _.leftUntilDone == 0, torrent_client.get_torrents())
+    torrents = torrent_client.get_torrents()
+    completed = filter(lambda t: t.left_until_done == 0, torrents)
     return list(completed)
 
 
