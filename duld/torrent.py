@@ -1,7 +1,7 @@
 import asyncio
 import os.path
 
-import transmissionrpc
+from transmission_rpc import Client, Torrent
 from wcpan.logger import DEBUG, INFO, WARNING, EXCEPTION
 
 from . import settings
@@ -28,8 +28,9 @@ class DiskSpaceListener(object):
 
     def _check_space(self):
         torrent_client = connect_transmission()
-        torrent_session = torrent_client.session_stats()
-        free_space_in_gb = torrent_session.download_dir_free_space / 1024 / 1024 / 1024
+        torrent_session = torrent_client.get_session()
+        download_dir = torrent_session.download_dir
+        free_space_in_gb = torrent_client.free_space(download_dir) / 1024 / 1024 / 1024
 
         reserved_space_in_gb = settings["reserved_space_in_gb"]
 
@@ -65,7 +66,11 @@ async def upload_torrent(uploader: DriveUploader, torrent_id: str):
     DEBUG("duld") << "{0}: {1}".format(torrent_name, root_items)
 
     INFO("duld") << "{0}: begin uploading".format(torrent_name)
-    torrent_root = torrent.downloadDir
+    torrent_root = torrent.download_dir
+    if not torrent_root:
+        INFO("duld") << "{0}: invalid location".format(torrent_name)
+        return
+
     # upload files to Cloud Drive
     ok = False
     try:
@@ -90,30 +95,29 @@ def get_completed():
     return list(completed)
 
 
-def get_root_items(torrent):
+def get_root_items(torrent: Torrent) -> list[str]:
     files = torrent.files()
-    common = set()
+    common: set[str] = set()
 
     # find common path
-    for fid, item in files.items():
+    for item in files:
         if not item["selected"]:
             continue
         parts = split_all(item["name"])
         common.add(parts[0])
 
-    common = list(common)
-    return common
+    return list(common)
 
 
-def remove_torrent(client, torrent_id):
+def remove_torrent(client: Client, torrent_id: str) -> None:
     client.remove_torrent(torrent_id, delete_data=True)
 
 
-def split_all(path: str):
+def split_all(path: str) -> list[str]:
     """
     Returns path parts by directories.
     """
-    allparts = []
+    allparts: list[str] = []
     while True:
         parts = os.path.split(path)
         if parts[0] == path:  # sentinel for absolute paths
@@ -128,30 +132,32 @@ def split_all(path: str):
     return allparts
 
 
-def connect_transmission():
+def connect_transmission() -> Client:
     opt = settings["transmission"]
-    client = transmissionrpc.Client(
-        opt["host"],
+    client = Client(
+        host=opt["host"],
         port=opt["port"],
-        user=opt.get("username", None),
+        username=opt.get("username", None),
         password=opt.get("password", None),
     )
     return client
 
 
-def halt_pending_torrents(client):
+def halt_pending_torrents(client: Client) -> None:
     torrents = client.get_torrents()
-    torrents = filter(
-        lambda t: t.status == "downloading" and t.downloadedEver == 0, torrents
-    )
-    for t in torrents:
-        t.stop()
+    torrent_id_list = [
+        t.id
+        for t in torrents
+        if t.status == 'downloading' and t.downloaded_ever == 0
+    ]
+    client.stop_torrent(torrent_id_list)
 
 
-def resume_halted_torrents(client):
+def resume_halted_torrents(client: Client) -> None:
     torrents = client.get_torrents()
-    torrents = filter(
-        lambda t: t.status == "stopped" and t.downloadedEver == 0, torrents
-    )
-    for t in torrents:
-        t.start()
+    torrent_id_list = [
+        t.id
+        for t in torrents
+        if t.status == 'stopped' and t.downloaded_ever == 0
+    ]
+    client.start_torrent(torrent_id_list)
