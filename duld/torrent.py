@@ -146,9 +146,7 @@ def connect_transmission() -> Client:
 def halt_pending_torrents(client: Client) -> None:
     torrents = client.get_torrents()
     torrent_id_list = [
-        t.id
-        for t in torrents
-        if t.status == 'downloading' and t.downloaded_ever == 0
+        t.id for t in torrents if t.status == "downloading" and t.downloaded_ever == 0
     ]
     client.stop_torrent(torrent_id_list)
 
@@ -156,8 +154,6 @@ def halt_pending_torrents(client: Client) -> None:
 def resume_halted_torrents(client: Client) -> None:
     torrents = client.get_torrents()
     torrent_id_list = [
-        t.id
-        for t in torrents
-        if t.status == 'stopped' and t.downloaded_ever == 0
+        t.id for t in torrents if t.status == "stopped" and t.downloaded_ever == 0
     ]
     client.start_torrent(torrent_id_list)
