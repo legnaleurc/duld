@@ -102,9 +102,9 @@ def get_root_items(torrent: Torrent) -> list[str]:
 
     # find common path
     for item in files:
-        if not item["selected"]:
+        if not item.selected:
             continue
-        parts = split_all(item["name"])
+        parts = split_all(item.name)
         common.add(parts[0])
 
     return list(common)
