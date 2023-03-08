@@ -50,7 +50,7 @@ class DiskSpaceListener(object):
             return
 
 
-async def upload_torrent(uploader: DriveUploader, torrent_id: str):
+async def upload_torrent(uploader: DriveUploader, torrent_id: int):
     torrent_client = connect_transmission()
     torrent = torrent_client.get_torrent(torrent_id)
     if not torrent:
@@ -89,7 +89,7 @@ async def upload_torrent(uploader: DriveUploader, torrent_id: str):
     remove_torrent(torrent_client, torrent_id)
 
 
-def get_completed():
+def get_completed() -> list[Torrent]:
     torrent_client = connect_transmission()
     torrents = torrent_client.get_torrents()
     completed = filter(lambda t: t.left_until_done == 0, torrents)
@@ -110,7 +110,7 @@ def get_root_items(torrent: Torrent) -> list[str]:
     return list(common)
 
 
-def remove_torrent(client: Client, torrent_id: str) -> None:
+def remove_torrent(client: Client, torrent_id: int) -> None:
     client.remove_torrent(torrent_id, delete_data=True)
 
 

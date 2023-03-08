@@ -3,15 +3,15 @@ import json
 
 from aiohttp.web import View, Response
 
-from . import torrent
+from .torrent import get_completed, upload_torrent
 
 
 class TorrentsHandler(View):
     async def post(self):
-        torrents = torrent.get_completed()
+        torrents = get_completed()
         uploader = self.request.app["uploader"]
         for t in torrents:
-            f = torrent.upload_torrent(uploader, t.id)
+            f = upload_torrent(uploader, t.id)
             asyncio.create_task(f)
         result = json.dumps([_.id for _ in torrents])
         result = result + "\n"
@@ -23,7 +23,7 @@ class TorrentsHandler(View):
             return Response(status=400)
 
         uploader = self.request.app["uploader"]
-        f = torrent.upload_torrent(uploader, torrent_id)
+        f = upload_torrent(uploader, int(torrent_id))
         asyncio.create_task(f)
         return Response(status=204)
 
