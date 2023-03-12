@@ -1,4 +1,5 @@
 import asyncio
+from logging import getLogger
 import re
 from concurrent.futures import ProcessPoolExecutor
 from contextlib import AsyncExitStack, contextmanager
@@ -9,7 +10,6 @@ import aiohttp
 from wcpan.drive.cli.util import get_media_info
 from wcpan.drive.core.drive import DriveFactory, upload_from_local
 from wcpan.drive.core.types import Node
-from wcpan.logger import INFO, ERROR, EXCEPTION, WARNING
 
 from . import settings
 
@@ -45,7 +45,7 @@ class DriveUploader(object):
 
     async def upload_path(self, remote_path: Path, local_path: Path):
         if local_path in self._jobs:
-            WARNING("duld") << local_path << "is still uploading"
+            getLogger(__name__).warning(f"{local_path} is still uploading")
             return False
 
         with job_guard(self._jobs, local_path):
@@ -53,12 +53,12 @@ class DriveUploader(object):
 
             node = await self._drive.get_node_by_path(remote_path)
             if not node:
-                ERROR("duld") << remote_path << "not found"
+                getLogger(__name__).error(f"{remote_path} not found")
                 return False
 
             ok = await self._upload(node, local_path)
             if not ok:
-                ERROR("duld") << local_path << "upload failed"
+                getLogger(__name__).error(f"{local_path} upload failed")
             return ok
 
     async def upload_torrent(
@@ -69,7 +69,7 @@ class DriveUploader(object):
         root_items: list[str],
     ):
         if torrent_id in self._jobs:
-            WARNING("duld") << torrent_id << "is still uploading"
+            getLogger(__name__).warning(f"{torrent_id} is still uploading")
             return False
 
         with job_guard(self._jobs, torrent_id):
@@ -77,7 +77,7 @@ class DriveUploader(object):
 
             node = await self._drive.get_node_by_path(remote_path)
             if not node:
-                ERROR("duld") << remote_path << "not found"
+                getLogger(__name__).error(f"{remote_path} not found")
                 return False
 
             # files/directories to be upload
@@ -86,7 +86,7 @@ class DriveUploader(object):
             for item in items:
                 ok = await self._upload(node, item)
                 if not ok:
-                    ERROR("duld") << item << "upload failed"
+                    getLogger(__name__).error(f"{item} upload failed")
                     all_ok = False
                     continue
 
@@ -98,15 +98,15 @@ class DriveUploader(object):
             count = 0
             async for changes in self._drive.sync():
                 count += 1
-            INFO("duld") << "sync" << count
+            getLogger(__name__).info(f"sync {count}")
 
     async def _upload(self, node: Node, local_path: Path) -> bool:
         if await self._should_exclude(local_path.name):
-            INFO("duld") << "excluded" << local_path
+            getLogger(__name__).info(f"excluded {local_path}")
             return True
 
         if not local_path.exists():
-            WARNING("duld") << "cannot upload non-exist path" << local_path
+            getLogger(__name__).warning(f"cannot upload non-exist path {local_path}")
             return False
 
         if local_path.is_dir():
@@ -123,7 +123,9 @@ class DriveUploader(object):
         if child_node and child_node.is_file:
             # is file
             path = await self._drive.get_path(child_node)
-            ERROR("duld") << "(remote)" << path << "is a file"
+            getLogger(__name__).error(
+                f"(remote) {path} is a file but treated as a folder"
+            )
             return False
         elif not child_node or child_node.trashed or node.trashed:
             # not exists
@@ -131,15 +133,12 @@ class DriveUploader(object):
             if not child_node:
                 path = await self._drive.get_path(node)
                 if not path:
-                    (
-                        ERROR("duld")
-                        << "(remote)"
-                        << node.name
-                        << "not found in local cache"
+                    getLogger(__name__).error(
+                        f"(remote) {node.name} not found in local cache"
                     )
                     return False
                 path = path / dir_name
-                ERROR("duld") << "(remote) cannot create" << path
+                getLogger(__name__).error(f"(remote) cannot create {path}")
                 return False
 
             # Need to update local cache for the added folder.
@@ -156,7 +155,7 @@ class DriveUploader(object):
         for child_path in local_path.iterdir():
             ok = await self._upload(child_node, child_path)
             if not ok:
-                ERROR("duld") << "(remote) cannot upload" << child_path
+                getLogger(__name__).error(f"(remote) cannot upload {child_path}")
                 all_ok = False
 
         return all_ok
@@ -165,21 +164,21 @@ class DriveUploader(object):
         for _ in range(RETRY_TIMES):
             try:
                 ok = await self._upload_file(node, local_path)
-            except Exception as e:
-                EXCEPTION("duld", e) << "retry upload file"
+            except Exception:
+                getLogger(__name__).exception("retry upload file")
             else:
                 return ok
 
             await self._sync()
         else:
-            ERROR("duld") << f"tried upload {RETRY_TIMES} times"
+            getLogger(__name__).error(f"tried upload {RETRY_TIMES} times")
             return False
 
     async def _upload_file(self, node: Node, local_path: Path) -> bool:
         file_name = local_path.name
         remote_path = await self._drive.get_path(node)
         if not remote_path:
-            ERROR("duld") << "(remote)" << node.name << "not found in local cache"
+            getLogger(__name__).error(f"(remote) {node.name} not found in local cache")
             return False
         remote_path = remote_path / file_name
 
@@ -187,7 +186,7 @@ class DriveUploader(object):
 
         if child_node and not child_node.trashed:
             if child_node.is_folder:
-                ERROR("duld") << "(remote)" << remote_path << "is a directory"
+                getLogger(__name__).error(f"(remote) {remote_path} is a directory")
                 return False
 
             # check integrity
@@ -196,10 +195,10 @@ class DriveUploader(object):
             )
             if not ok:
                 return False
-            INFO("duld") << remote_path << "already exists"
+            getLogger(__name__).info(f"{remote_path} already exists")
 
         if not child_node or child_node.trashed:
-            INFO("duld") << "uploading" << remote_path
+            getLogger(__name__).info(f"uploading {remote_path}")
 
             media_info = await get_media_info(local_path)
             child_node = await upload_from_local(
@@ -235,9 +234,8 @@ class DriveUploader(object):
             local_path,
         )
         if local_hash != remote_hash:
-            (
-                ERROR("duld")
-                << f"(remote) {remote_path} has a different hash ({local_hash}, {remote_hash})"
+            getLogger(__name__).error(
+                f"(remote) {remote_path} has a different hash ({local_hash}, {remote_hash})"
             )
             return False
         return True
@@ -251,8 +249,8 @@ class DriveUploader(object):
         try:
             await self._drive.trash_node_by_id(node.id_)
             return True
-        except Exception as e:
-            EXCEPTION("duld", e)
+        except Exception:
+            getLogger(__name__).exception(f"failed to resolve name confliction")
         return False
 
     async def _should_exclude(self, name: str):

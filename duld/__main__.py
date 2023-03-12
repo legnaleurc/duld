@@ -1,11 +1,13 @@
 import asyncio
 import argparse
+from logging import getLogger
+from logging.config import dictConfig
 import signal
 import sys
 from contextlib import AsyncExitStack
 
 from aiohttp.web import Application, AppRunner, TCPSite
-from wcpan.logger import setup as setup_logger, EXCEPTION
+from wcpan.logging import ConfigBuilder
 
 from . import api, drive, hah, settings, torrent
 
@@ -14,13 +16,10 @@ class Daemon(object):
     def __init__(self, args):
         args = parse_args(args)
         settings.reload(args.settings)
-        setup_logger(
-            (
-                "aiohttp",
-                "wcpan.drive.google",
-                "duld",
-            ),
-            settings["log_path"],
+        dictConfig(
+            ConfigBuilder(path=settings["log_path"], rotate=True)
+            .add("wcpan", "duld", level="D")
+            .to_dict()
         )
 
         self._finished = None
@@ -35,8 +34,8 @@ class Daemon(object):
     async def _guard(self):
         try:
             return await self._main()
-        except Exception as e:
-            EXCEPTION("duld", e)
+        except Exception:
+            getLogger(__name__).exception("main function error")
         return 1
 
     async def _main(self):

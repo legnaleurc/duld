@@ -1,5 +1,6 @@
 import asyncio
 import glob
+from logging import getLogger
 import os
 import re
 import shutil
@@ -8,7 +9,6 @@ from pathlib import Path
 from typing import Coroutine
 
 from asyncinotify import Inotify, Mask
-from wcpan.logger import DEBUG, ERROR
 
 from .drive import DriveUploader
 
@@ -121,7 +121,7 @@ class HaHEventHandler(object):
         paths = self._download_path.glob(m)
         paths = list(paths)
         if len(paths) != 1:
-            ERROR("duld") << "(hah)" << name << "has multiple target" << paths
+            getLogger(__name__).error(f"(hah) {name} has multiple target {paths}")
             return
 
         await upload(self._uploader, self._upload_path, paths[0])
@@ -159,7 +159,7 @@ class HaHListener(object):
             async for event in self._watcher:
                 await self._handler.on_modified(event)
         except Exception:
-            DEBUG("duld") << "inotify stopped"
+            getLogger(__name__).debug(f"inotify stopped")
 
 
 @contextmanager
@@ -195,11 +195,11 @@ def parse_name(line: str):
 
 async def upload(uploader: DriveUploader, dst_path: Path, src_path: Path):
     if not src_path.exists():
-        DEBUG("duld") << "hah ignored deleted path" << src_path
+        getLogger(__name__).debug(f"hah ignored deleted path {src_path}")
         return
-    DEBUG("duld") << "hah upload" << src_path
+    getLogger(__name__).debug(f"hah upload {src_path}")
     ok = await uploader.upload_path(dst_path, src_path)
     if not ok:
         return
-    DEBUG("duld") << "rm -rf" << src_path
+    getLogger(__name__).debug(f"rm -rf {src_path}")
     shutil.rmtree(src_path, ignore_errors=True)

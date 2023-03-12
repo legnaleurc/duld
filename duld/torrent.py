@@ -1,8 +1,8 @@
 import asyncio
+from logging import getLogger
 import os.path
 
 from transmission_rpc import Client, Torrent
-from wcpan.logger import DEBUG, INFO, WARNING, EXCEPTION
 
 from . import settings
 from .drive import DriveUploader
@@ -36,15 +36,15 @@ class DiskSpaceListener(object):
 
         if free_space_in_gb >= reserved_space_in_gb["safe"]:
             if self._halted:
-                INFO("acdul") << "resuming halted torrents: {0}".format(
-                    free_space_in_gb
+                getLogger(__name__).info(
+                    f"resuming halted torrents: {free_space_in_gb}"
                 )
                 resume_halted_torrents(torrent_client)
                 self._halted = False
             return
         if free_space_in_gb <= reserved_space_in_gb["danger"]:
             if not self._halted:
-                INFO("acdul") << "halting queued torrents: {0}".format(free_space_in_gb)
+                getLogger(__name__).info(f"halting queued torrents: {free_space_in_gb}")
                 halt_pending_torrents(torrent_client)
                 self._halted = True
             return
@@ -54,21 +54,21 @@ async def upload_torrent(uploader: DriveUploader, torrent_id: int):
     torrent_client = connect_transmission()
     torrent = torrent_client.get_torrent(torrent_id)
     if not torrent:
-        WARNING("duld") << "no such torrent id {0}".format(torrent_id)
+        getLogger(__name__).warning(f"no such torrent id {torrent_id}")
         return
     torrent_name = torrent.name
-    INFO("duld") << "{0}: processing".format(torrent_name)
+    getLogger(__name__).info(f"{torrent_name}: processing")
 
     root_items = get_root_items(torrent)
     if not root_items:
-        WARNING("duld") << "{0}: no item to upload?".format(torrent_name)
+        getLogger(__name__).warning(f"{torrent_name}: no item to upload?")
         return
-    DEBUG("duld") << "{0}: {1}".format(torrent_name, root_items)
+    getLogger(__name__).debug(f"{torrent_name}: {root_items}")
 
-    INFO("duld") << "{0}: begin uploading".format(torrent_name)
+    getLogger(__name__).info(f"{torrent_name}: begin uploading")
     torrent_root = torrent.download_dir
     if not torrent_root:
-        INFO("duld") << "{0}: invalid location".format(torrent_name)
+        getLogger(__name__).info(f"{torrent_name}: invalid location")
         return
 
     # upload files to Cloud Drive
@@ -77,14 +77,14 @@ async def upload_torrent(uploader: DriveUploader, torrent_id: int):
         ok = await uploader.upload_torrent(
             settings["upload_to"], torrent_id, torrent_root, root_items
         )
-    except Exception as e:
-        EXCEPTION("duld", e)
+    except Exception:
+        getLogger(__name__).exception("upload failed")
     if not ok:
-        INFO("duld") << "{0}: upload failed".format(torrent_name)
-        INFO("duld") << "retry url: /api/v1/torrents/{0}".format(torrent_id)
+        getLogger(__name__).info(f"{torrent_name}: upload failed")
+        getLogger(__name__).info(f"retry url: /api/v1/torrents/{torrent_id}")
         return
 
-    INFO("duld") << "{0}: remove torrent".format(torrent_name)
+    getLogger(__name__).info(f"{torrent_name}: remove torrent")
     # remove the task from Transmission first
     remove_torrent(torrent_client, torrent_id)
 
