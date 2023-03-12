@@ -15,26 +15,26 @@ from .drive import DriveUploader
 
 class HaHContext(object):
     def __init__(self, hah_path: str, upload_to: str, uploader: DriveUploader):
-        self._hah_path = Path(hah_path) if hah_path else None
+        self._hah_path = Path(hah_path)
         self._upload_to = Path(upload_to)
         self._uploader = uploader
         self._raii = None
 
     async def __aenter__(self):
         async with AsyncExitStack() as stack:
-            if self._hah_path:
-                stack.enter_context(
-                    HaHListener(
-                        self._hah_path / "log",
-                        self._hah_path / "download",
-                        self._upload_to,
-                        self._uploader,
-                    )
+            stack.enter_context(
+                HaHListener(
+                    self._hah_path / "log",
+                    self._hah_path / "download",
+                    self._upload_to,
+                    self._uploader,
                 )
+            )
             self._raii = stack.pop_all()
         return self
 
     async def __aexit__(self, type_, exc, tb):
+        assert self._raii
         await self._raii.aclose()
         self._raii = None
 
@@ -46,8 +46,7 @@ class HaHContext(object):
         finished = (forders.get(_, None) for _ in finished if _)
         finished = [_ for _ in finished if _]
 
-        f = self._upload_all(finished)
-        asyncio.create_task(f)
+        asyncio.create_task(self._upload_all(finished))
 
         return finished
 
@@ -150,11 +149,13 @@ class HaHListener(object):
         return self
 
     def __exit__(self, type_, exc, tb):
+        assert self._raii
         self._raii.close()
         self._watcher = None
         self._raii = None
 
     async def _listen(self):
+        assert self._watcher
         try:
             async for event in self._watcher:
                 await self._handler.on_modified(event)

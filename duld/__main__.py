@@ -4,7 +4,7 @@ from logging import getLogger
 from logging.config import dictConfig
 import signal
 import sys
-from contextlib import AsyncExitStack
+from contextlib import AsyncExitStack, asynccontextmanager
 
 from aiohttp.web import Application, AppRunner, TCPSite
 from wcpan.logging import ConfigBuilder
@@ -15,13 +15,12 @@ from . import api, drive, hah, settings, torrent
 class Daemon(object):
     def __init__(self, args):
         args = parse_args(args)
-        settings.reload(args.settings)
+        self._cfg = settings.load_from_path(args.settings)
         dictConfig(
-            ConfigBuilder(path=settings["log_path"], rotate=True)
+            ConfigBuilder(path=self._cfg.log_path, rotate=True)
             .add("wcpan", "duld", level="D")
             .to_dict()
         )
-
         self._finished = None
 
     async def __call__(self):
@@ -41,61 +40,76 @@ class Daemon(object):
     async def _main(self):
         app = Application()
 
-        app.router.add_view(r"/api/v1/torrents", api.TorrentsHandler)
-        app.router.add_view(r"/api/v1/torrents/{torrent_id:\d+}", api.TorrentsHandler)
-        app.router.add_view(r"/api/v1/hah", api.HaHHandler)
+        if self._cfg.transmission:
+            app.router.add_view(r"/api/v1/torrents", api.TorrentsHandler)
+            app.router.add_view(
+                r"/api/v1/torrents/{torrent_id:\d+}", api.TorrentsHandler
+            )
+        if self._cfg.hah_path:
+            app.router.add_view(r"/api/v1/hah", api.HaHHandler)
 
         async with AsyncExitStack() as stack:
-            uploader = await stack.enter_async_context(drive.DriveUploader())
+            app["ctx"] = self._cfg
 
-            hah_context = await stack.enter_async_context(
-                hah.HaHContext(
-                    settings["hah_path"],
-                    settings["upload_to"],
-                    uploader,
+            uploader = await stack.enter_async_context(
+                drive.DriveUploader(
+                    exclude_pattern=self._cfg.exclude_pattern,
+                    exclude_url=self._cfg.exclude_url,
                 )
             )
-
-            if settings["reserved_space_in_gb"]:
-                stack.enter_context(torrent.DiskSpaceListener())
-
             app["uploader"] = uploader
-            app["hah"] = hah_context
 
-            await stack.enter_async_context(ServerContext(app))
+            if self._cfg.hah_path:
+                hah_context = await stack.enter_async_context(
+                    hah.HaHContext(
+                        self._cfg.hah_path,
+                        self._cfg.upload_to,
+                        uploader,
+                    )
+                )
+                app["hah"] = hah_context
+
+            if self._cfg.transmission and self._cfg.reserved_space_in_gb:
+                await stack.enter_async_context(
+                    torrent.DiskSpaceListener(
+                        self._cfg.transmission, self._cfg.reserved_space_in_gb
+                    )
+                )
+
+            await stack.enter_async_context(server_context(app, self._cfg.port))
 
             await self._wait_for_finished()
 
         return 0
 
     def _close_from_signal(self):
+        assert self._finished
         self._finished.set()
 
     async def _wait_for_finished(self):
+        assert self._finished
         await self._finished.wait()
 
 
-class ServerContext(object):
-    def __init__(self, app):
-        self._runner = AppRunner(app)
-
-    async def __aenter__(self):
-        await self._runner.setup()
-        site = TCPSite(self._runner, host="127.0.0.1", port=settings["port"])
+@asynccontextmanager
+async def server_context(app: Application, port: int):
+    runner = AppRunner(app)
+    await runner.setup()
+    try:
+        site = TCPSite(runner, host="127.1", port=port)
         await site.start()
-        return self._runner
-
-    async def __aexit__(self, exc_type, exc, tb):
-        await self._runner.cleanup()
+        site = TCPSite(runner, host="::1", port=port)
+        await site.start()
+        yield
+    finally:
+        await runner.cleanup()
 
 
 def parse_args(args):
     parser = argparse.ArgumentParser(
         prog="duld", formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    parser.add_argument(
-        "-s", "--settings", default="duld.yaml", type=str, help="settings file name"
-    )
+    parser.add_argument("-s", "--settings", type=str, help="settings file name")
     args = parser.parse_args(args[1:])
     return args
 

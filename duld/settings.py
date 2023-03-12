@@ -1,7 +1,6 @@
 from dataclasses import dataclass
-import sys
-import dacite
 
+import dacite
 import yaml
 
 
@@ -36,18 +35,3 @@ def load_from_path(path: str) -> Data:
         raw_data = yaml.safe_load(fin)
         data = dacite.from_dict(Data, raw_data)
         return data
-
-
-class Settings(object):
-    def __init__(self):
-        self._data = None
-
-    def __getitem__(self, key):
-        return self._data[key]
-
-    def reload(self, path):
-        with open(path, mode="r", encoding="utf-8") as fin:
-            self._data = yaml.safe_load(fin)
-
-
-sys.modules[__name__] = Settings()

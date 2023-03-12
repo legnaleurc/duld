@@ -3,7 +3,7 @@ from logging import getLogger
 import re
 from concurrent.futures import ProcessPoolExecutor
 from contextlib import AsyncExitStack, contextmanager
-from pathlib import Path
+from pathlib import Path, PurePath
 from typing import TypeVar
 
 import aiohttp
@@ -11,14 +11,14 @@ from wcpan.drive.cli.util import get_media_info
 from wcpan.drive.core.drive import DriveFactory, upload_from_local
 from wcpan.drive.core.types import Node
 
-from . import settings
-
 
 RETRY_TIMES = 3
 
 
-class DriveUploader(object):
-    def __init__(self):
+class DriveUploader:
+    def __init__(self, exclude_pattern: list[str] | None, exclude_url: str | None):
+        self._exclude_pattern = [] if not exclude_pattern else exclude_pattern
+        self._exclude_url = exclude_url
         self._jobs = set()
         self._sync_lock = asyncio.Lock()
         self._drive = None
@@ -37,6 +37,7 @@ class DriveUploader(object):
         return self
 
     async def __aexit__(self, type_, exc, tb):
+        assert self._raii
         await self._raii.aclose()
         self._drive = None
         self._curl = None
@@ -44,6 +45,8 @@ class DriveUploader(object):
         self._raii = None
 
     async def upload_path(self, remote_path: Path, local_path: Path):
+        assert self._drive
+
         if local_path in self._jobs:
             getLogger(__name__).warning(f"{local_path} is still uploading")
             return False
@@ -63,11 +66,13 @@ class DriveUploader(object):
 
     async def upload_torrent(
         self,
-        remote_path: Path,
-        torrent_id: str,
+        remote_path: PurePath,
+        torrent_id: int,
         torrent_root: str,
         root_items: list[str],
     ):
+        assert self._drive
+
         if torrent_id in self._jobs:
             getLogger(__name__).warning(f"{torrent_id} is still uploading")
             return False
@@ -93,6 +98,7 @@ class DriveUploader(object):
             return all_ok
 
     async def _sync(self):
+        assert self._drive
         async with self._sync_lock:
             await asyncio.sleep(1)
             count = 0
@@ -116,6 +122,8 @@ class DriveUploader(object):
         return ok
 
     async def _upload_directory(self, node: Node, local_path: Path) -> bool:
+        assert self._drive
+
         dir_name = local_path.name
 
         # find or create remote directory
@@ -175,6 +183,8 @@ class DriveUploader(object):
             return False
 
     async def _upload_file(self, node: Node, local_path: Path) -> bool:
+        assert self._drive
+
         file_name = local_path.name
         remote_path = await self._drive.get_path(node)
         if not remote_path:
@@ -187,6 +197,10 @@ class DriveUploader(object):
         if child_node and not child_node.trashed:
             if child_node.is_folder:
                 getLogger(__name__).error(f"(remote) {remote_path} is a directory")
+                return False
+
+            if not child_node.hash_:
+                getLogger(__name__).error(f"(remote) {remote_path} has invalid hash")
                 return False
 
             # check integrity
@@ -208,6 +222,14 @@ class DriveUploader(object):
                 media_info,
             )
 
+            if not child_node:
+                getLogger(__name__).error(f"(remote) {remote_path} upload failed")
+                return False
+
+            if not child_node.hash_:
+                getLogger(__name__).error(f"(remote) {remote_path} has invalid hash")
+                return False
+
             # check integrity
             ok = await self._verify_remote_file(
                 local_path,
@@ -222,9 +244,10 @@ class DriveUploader(object):
     async def _verify_remote_file(
         self,
         local_path: Path,
-        remote_path: Path,
+        remote_path: PurePath,
         remote_hash: str,
     ):
+        assert self._drive
         loop = asyncio.get_running_loop()
         hasher = await self._drive.get_hasher()
         local_hash = await loop.run_in_executor(
@@ -242,9 +265,10 @@ class DriveUploader(object):
 
     # used in exception handler, DO NOT throw another exception again
     async def _try_resolve_name_confliction(self, node: Node, local_path: Path):
+        assert self._drive
         name = local_path.name
-        node = await self._drive.get_node_by_name_from_parent(name, node)
-        if not node:
+        child = await self._drive.get_node_by_name_from_parent(name, node)
+        if not child:
             return True
         try:
             await self._drive.trash_node_by_id(node.id_)
@@ -254,13 +278,13 @@ class DriveUploader(object):
         return False
 
     async def _should_exclude(self, name: str):
-        for pattern in settings["exclude_pattern"]:
+        for pattern in self._exclude_pattern:
             if re.match(pattern, name, re.IGNORECASE):
                 return True
 
-        if settings["exclude_url"]:
-            async with self._curl.get(settings["exclude_url"]) as rv:
-                rv: dict[str, str] = await rv.json()
+        if self._exclude_url and self._curl:
+            async with self._curl.get(self._exclude_url) as res:
+                rv: dict[str, str] = await res.json()
                 for _, pattern in rv.items():
                     if re.match(pattern, name, re.IGNORECASE):
                         return True
@@ -268,7 +292,7 @@ class DriveUploader(object):
         return False
 
 
-def md5sum(hasher, path):
+def md5sum(hasher, path: Path):
     with path.open("rb") as fin:
         while True:
             chunk = fin.read(65536)

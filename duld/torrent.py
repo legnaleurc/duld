@@ -1,23 +1,31 @@
 import asyncio
 from logging import getLogger
 import os.path
+from pathlib import PurePath
 
 from transmission_rpc import Client, Torrent
 
-from . import settings
 from .drive import DriveUploader
+from .settings import DiskSpaceData, TransmissionData
 
 
 class DiskSpaceListener(object):
-    def __init__(self):
+    def __init__(self, transmission: TransmissionData, disk_space: DiskSpaceData):
+        self._transmission = transmission
+        self._disk_space = disk_space
         self._timer = None
 
-    def __enter__(self):
+    async def __aenter__(self):
         self._timer = asyncio.create_task(self._loop())
         return self
 
-    def __exit__(self, type_, exc, tb):
+    async def __aexit__(self, type_, exc, tb):
+        assert self._timer
         self._timer.cancel()
+        try:
+            await self._timer
+        except asyncio.CancelledError:
+            getLogger(__name__).debug("stopped disk space listener")
         self._timer = None
 
     async def _loop(self):
@@ -27,14 +35,15 @@ class DiskSpaceListener(object):
             self._check_space()
 
     def _check_space(self):
-        torrent_client = connect_transmission()
+        torrent_client = connect_transmission(self._transmission)
         torrent_session = torrent_client.get_session()
         download_dir = torrent_session.download_dir
-        free_space_in_gb = torrent_client.free_space(download_dir) / 1024 / 1024 / 1024
+        free_space = torrent_client.free_space(download_dir)
+        if free_space is None:
+            return
+        free_space_in_gb = free_space / 1024 / 1024 / 1024
 
-        reserved_space_in_gb = settings["reserved_space_in_gb"]
-
-        if free_space_in_gb >= reserved_space_in_gb["safe"]:
+        if free_space_in_gb >= self._disk_space.safe:
             if self._halted:
                 getLogger(__name__).info(
                     f"resuming halted torrents: {free_space_in_gb}"
@@ -42,7 +51,7 @@ class DiskSpaceListener(object):
                 resume_halted_torrents(torrent_client)
                 self._halted = False
             return
-        if free_space_in_gb <= reserved_space_in_gb["danger"]:
+        if free_space_in_gb <= self._disk_space.danger:
             if not self._halted:
                 getLogger(__name__).info(f"halting queued torrents: {free_space_in_gb}")
                 halt_pending_torrents(torrent_client)
@@ -50,8 +59,13 @@ class DiskSpaceListener(object):
             return
 
 
-async def upload_torrent(uploader: DriveUploader, torrent_id: int):
-    torrent_client = connect_transmission()
+async def upload_torrent(
+    uploader: DriveUploader,
+    upload_to: str,
+    transmission: TransmissionData,
+    torrent_id: int,
+):
+    torrent_client = connect_transmission(transmission)
     torrent = torrent_client.get_torrent(torrent_id)
     if not torrent:
         getLogger(__name__).warning(f"no such torrent id {torrent_id}")
@@ -75,7 +89,7 @@ async def upload_torrent(uploader: DriveUploader, torrent_id: int):
     ok = False
     try:
         ok = await uploader.upload_torrent(
-            settings["upload_to"], torrent_id, torrent_root, root_items
+            PurePath(upload_to), torrent_id, torrent_root, root_items
         )
     except Exception:
         getLogger(__name__).exception("upload failed")
@@ -89,8 +103,8 @@ async def upload_torrent(uploader: DriveUploader, torrent_id: int):
     remove_torrent(torrent_client, torrent_id)
 
 
-def get_completed() -> list[Torrent]:
-    torrent_client = connect_transmission()
+def get_completed(transmission: TransmissionData) -> list[Torrent]:
+    torrent_client = connect_transmission(transmission)
     torrents = torrent_client.get_torrents()
     completed = filter(lambda t: t.left_until_done == 0, torrents)
     return list(completed)
@@ -133,13 +147,13 @@ def split_all(path: str) -> list[str]:
     return allparts
 
 
-def connect_transmission() -> Client:
-    opt = settings["transmission"]
+def connect_transmission(transmission: TransmissionData) -> Client:
+    opt = transmission
     client = Client(
-        host=opt["host"],
-        port=opt["port"],
-        username=opt.get("username", None),
-        password=opt.get("password", None),
+        host=opt.host,
+        port=opt.port,
+        username=opt.username,
+        password=opt.password,
     )
     return client
 
