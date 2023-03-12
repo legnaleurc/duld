@@ -17,6 +17,7 @@ wcpan-drive-google = "^8.1.0"
 wcpan-drive-crypt = "^3.1.0"
 transmission-rpc = "^4.1.2"
 wcpan-logging = "^2.0.2"
+dacite = "^1.8.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
