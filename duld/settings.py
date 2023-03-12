@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import sys
+import dacite
 
 import yaml
 
@@ -28,6 +29,13 @@ class Data:
     reserved_space_in_gb: DiskSpaceData | None
     transmission: TransmissionData | None
     hah_path: str | None
+
+
+def load_from_path(path: str) -> Data:
+    with open(path, mode="r", encoding="utf-8") as fin:
+        raw_data = yaml.safe_load(fin)
+        data = dacite.from_dict(Data, raw_data)
+        return data
 
 
 class Settings(object):
