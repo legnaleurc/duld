@@ -223,7 +223,6 @@ mypy-extensions = ">=0.4.3"
 packaging = ">=22.0"
 pathspec = ">=0.9.0"
 platformdirs = ">=2"
-tomli = {version = ">=1.1.0", markers = "python_version < \"3.11\""}
 
 [package.extras]
 colorama = ["colorama (>=0.4.3)"]
@@ -702,14 +701,14 @@ tests = ["check-manifest", "coverage", "defusedxml", "markdown2", "olefile", "pa
 
 [[package]]
 name = "platformdirs"
-version = "3.1.0"
+version = "3.1.1"
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
 category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "platformdirs-3.1.0-py3-none-any.whl", hash = "sha256:13b08a53ed71021350c9e300d4ea8668438fb0046ab3937ac9a29913a1a1350a"},
-    {file = "platformdirs-3.1.0.tar.gz", hash = "sha256:accc3665857288317f32c7bebb5a8e482ba717b474f3fc1d18ca7f9214be0cef"},
+    {file = "platformdirs-3.1.1-py3-none-any.whl", hash = "sha256:e5986afb596e4bb5bde29a79ac9061aa955b94fca2399b7aaac4090860920dd8"},
+    {file = "platformdirs-3.1.1.tar.gz", hash = "sha256:024996549ee88ec1a9aa99ff7f8fc819bb59e2c3477b410d90a16d32d6e707aa"},
 ]
 
 [package.extras]
@@ -816,27 +815,15 @@ files = [
 ]
 
 [[package]]
-name = "tomli"
-version = "2.0.1"
-description = "A lil' TOML parser"
-category = "dev"
-optional = false
-python-versions = ">=3.7"
-files = [
-    {file = "tomli-2.0.1-py3-none-any.whl", hash = "sha256:939de3e7a6161af0c887ef91b7d41a53e7c5a1ca976325f429cb46ea9bc30ecc"},
-    {file = "tomli-2.0.1.tar.gz", hash = "sha256:de526c12914f0c550d15924c62d72abc48d6fe7364aa87328337a31007fe8a4f"},
-]
-
-[[package]]
 name = "transmission-rpc"
-version = "4.1.2"
+version = "4.1.3"
 description = "Python module that implements the Transmission bittorent client JSON-RPC protocol"
 category = "main"
 optional = false
 python-versions = ">=3.8,<4.0"
 files = [
-    {file = "transmission_rpc-4.1.2-py3-none-any.whl", hash = "sha256:1d46119416cf485ca1012bb17f2d80cc8defffd3bf4fbb08a8783ee4ecd099c7"},
-    {file = "transmission_rpc-4.1.2.tar.gz", hash = "sha256:8a206c2d702350837a6ffdb3b7c3c4c6828ecee56eda9d70710a07a4a02727fe"},
+    {file = "transmission_rpc-4.1.3-py3-none-any.whl", hash = "sha256:207619ac595b639d30197580c6116705e1914416199b45a54df0f96a3c956aad"},
+    {file = "transmission_rpc-4.1.3.tar.gz", hash = "sha256:f58f313f6b9805f71be08a2f402c3cad3f372966a7d839163bf1c41fcb511f2b"},
 ]
 
 [package.dependencies]
@@ -847,14 +834,14 @@ docs = ["sphinx (==6.1.3)", "sphinx-rtd-theme (==1.2.0)"]
 
 [[package]]
 name = "urllib3"
-version = "1.26.14"
+version = "1.26.15"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
 category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*"
 files = [
-    {file = "urllib3-1.26.14-py2.py3-none-any.whl", hash = "sha256:75edcdc2f7d85b137124a6c3c9fc3933cdeaa12ecb9a6a959f22797a0feca7e1"},
-    {file = "urllib3-1.26.14.tar.gz", hash = "sha256:076907bf8fd355cde77728471316625a4d2f7e713c125f51953bb5b3eecf4f72"},
+    {file = "urllib3-1.26.15-py2.py3-none-any.whl", hash = "sha256:aa751d169e23c7479ce47a0cb0da579e3ede798f994f5816a74e4f4500dcea42"},
+    {file = "urllib3-1.26.15.tar.gz", hash = "sha256:8a388717b9476f934a21484e8c8e61875ab60644d29b9b39e11e4b9dc1c6b305"},
 ]
 
 [package.extras]
@@ -864,39 +851,38 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 
 [[package]]
 name = "wcpan-drive-cli"
-version = "2.2.0"
+version = "2.3.0"
 description = "command line tool for wcpan.drive"
 category = "main"
 optional = false
-python-versions = ">=3.10,<4.0"
+python-versions = ">=3.11,<4.0"
 files = [
-    {file = "wcpan_drive_cli-2.2.0-py3-none-any.whl", hash = "sha256:31a4200471c211ea4d30e19a968c5a438b998f13ac8a509d6545cc735d7dfefe"},
-    {file = "wcpan_drive_cli-2.2.0.tar.gz", hash = "sha256:9e80c860396e66ec6fe2bafe32533a55a9469ffdc61f9cca611f1fb350137d63"},
+    {file = "wcpan_drive_cli-2.3.0-py3-none-any.whl", hash = "sha256:a02a4c164fde0f2955305f738cb26a73b29a8b447bd79c664fe683dbfb3a8b16"},
+    {file = "wcpan_drive_cli-2.3.0.tar.gz", hash = "sha256:e5558bf1de10be29d738ad63e06bff83967cd1d0a5c42c746e8ee3fe854a51ba"},
 ]
 
 [package.dependencies]
 Pillow = ">=9.0,<10.0"
 PyYAML = ">=6.0,<7.0"
-"wcpan.drive.core" = ">=3.1.0,<4.0.0"
-"wcpan.logger" = ">=1.2,<2.0"
-"wcpan.worker" = ">=5.0,<6.0"
+wcpan-drive-core = ">=3.1.0,<4.0.0"
+wcpan-logging = ">=2.0.1,<3.0.0"
+wcpan-worker = ">=6.0.0,<7.0.0"
 
 [[package]]
 name = "wcpan-drive-core"
-version = "3.2.0"
+version = "3.2.1"
 description = "asynchronous generic cloud drive library"
 category = "main"
 optional = false
-python-versions = ">=3.10,<4.0"
+python-versions = ">=3.11,<4.0"
 files = [
-    {file = "wcpan_drive_core-3.2.0-py3-none-any.whl", hash = "sha256:8f8d24c2fa63850498b400c9f014c282ab5cee0f60ab9541910a2390eee4cd9a"},
-    {file = "wcpan_drive_core-3.2.0.tar.gz", hash = "sha256:0d11756e1f702ba5f35f84095bf0cf0dc3b65d5c76171495f6a38bcc376cf2f9"},
+    {file = "wcpan_drive_core-3.2.1-py3-none-any.whl", hash = "sha256:fdde18927e6b495ed7a95af09ea72ca810da518648839c0676ba0ce9d3bcd445"},
+    {file = "wcpan_drive_core-3.2.1.tar.gz", hash = "sha256:4982232342be56e20fa3af3e0a36997c457889154adb22e560b2941da7fb88f2"},
 ]
 
 [package.dependencies]
 arrow = ">=1.2.3,<2.0.0"
 PyYAML = ">=6.0,<7.0"
-"wcpan.logger" = ">=1.2,<2.0"
 
 [[package]]
 name = "wcpan-drive-crypt"
@@ -916,49 +902,45 @@ numpy = ">=1.18.0,<2.0.0"
 
 [[package]]
 name = "wcpan-drive-google"
-version = "8.1.0"
+version = "8.1.1"
 description = "Google Drive driver for wcpan.drive"
 category = "main"
 optional = false
-python-versions = ">=3.10,<4.0"
+python-versions = ">=3.11,<4.0"
 files = [
-    {file = "wcpan_drive_google-8.1.0-py3-none-any.whl", hash = "sha256:b9d7d435696abfd0f4b7c8d7d6992aa82c27f6c068fd0a7127a184a564d8f13d"},
-    {file = "wcpan_drive_google-8.1.0.tar.gz", hash = "sha256:e4c25fefed137073d031f7fc220d994c1dc392d86c9da023402d9536d2c84dfa"},
+    {file = "wcpan_drive_google-8.1.1-py3-none-any.whl", hash = "sha256:7008870279dd8a22f1bd7d3a44a1e290e5c7737c154a74d7b56cd3051513cf76"},
+    {file = "wcpan_drive_google-8.1.1.tar.gz", hash = "sha256:109deaabec5ccbe8313e65a9d7f2f874d3b741160b15714be610a27aa236d071"},
 ]
 
 [package.dependencies]
 aiohttp = ">=3.6.0,<4.0.0"
 arrow = ">=1.2.3,<2.0.0"
 PyYAML = ">=6.0,<7.0"
-"wcpan.drive.core" = ">=3.0.0,<4.0.0"
-"wcpan.logger" = ">=1.2,<2.0"
+wcpan-drive-core = ">=3.0.0,<4.0.0"
 
 [[package]]
-name = "wcpan-logger"
-version = "1.5.0"
-description = "A RAII style logging module"
+name = "wcpan-logging"
+version = "2.0.2"
+description = "Configuration generator for builtin logging module."
 category = "main"
 optional = false
-python-versions = ">=3.5"
+python-versions = ">=3.11,<4.0"
 files = [
-    {file = "wcpan.logger-1.5.0-py3-none-any.whl", hash = "sha256:6b6378a077008fe30051eee0d0a2ccd19e62b8f48975f1d1fd7b0574b3497a61"},
-    {file = "wcpan.logger-1.5.0.tar.gz", hash = "sha256:644ec36334ebd860235fee0080a5a92dd06cfb39588b94cc237b46c1b0ec46b7"},
+    {file = "wcpan_logging-2.0.2-py3-none-any.whl", hash = "sha256:94fc764ebd68cb8b2f083d147cea90cc77566764288e3de1cdcb1b0e6e382a32"},
+    {file = "wcpan_logging-2.0.2.tar.gz", hash = "sha256:f68d39a8f24daaa93ee2b2a46efe1d517ec65108c724c266096cf20de9f4ffbe"},
 ]
 
 [[package]]
 name = "wcpan-worker"
-version = "5.0.0"
+version = "6.0.0"
 description = "An asynchronous task queue with priority support."
 category = "main"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.11,<4.0"
 files = [
-    {file = "wcpan.worker-5.0.0-py3-none-any.whl", hash = "sha256:24d74f1a2e30b3bbd55bb044435c71c76c4a004116f2e8345c5e1490e36ed4e8"},
-    {file = "wcpan.worker-5.0.0.tar.gz", hash = "sha256:a6fe6f13ac14e2400e5972db21704d6e912ff0cb4a9d0d25e105b0f696445c33"},
+    {file = "wcpan_worker-6.0.0-py3-none-any.whl", hash = "sha256:1e9edd8cb018139961760ee5bce3e38eb44689fbba59e78a5c60f27a567a1cb1"},
+    {file = "wcpan_worker-6.0.0.tar.gz", hash = "sha256:1e434523fd2883943e8b419250017d3b5627c055ef90a994a06d95bdc82b3607"},
 ]
-
-[package.dependencies]
-"wcpan.logger" = ">=1.2,<2.0"
 
 [[package]]
 name = "yarl"
@@ -1050,5 +1032,5 @@ multidict = ">=4.0"
 
 [metadata]
 lock-version = "2.0"
-python-versions = "^3.10"
-content-hash = "347fe5b1cfdb9344d55e19eccf86680484cfab7b554113083158ecdc41511b33"
+python-versions = "^3.11"
+content-hash = "353fe6afa318a5b97f9e8a93a55202c7ccd072b6b420332f723210702ca5507f"
