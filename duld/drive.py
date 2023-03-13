@@ -8,6 +8,7 @@ from typing import TypeVar
 
 import aiohttp
 from wcpan.drive.cli.util import get_media_info
+from wcpan.drive.core.abc import Hasher
 from wcpan.drive.core.drive import DriveFactory, upload_from_local
 from wcpan.drive.core.types import Node
 
@@ -292,7 +293,7 @@ class DriveUploader:
         return False
 
 
-def md5sum(hasher, path: Path):
+def md5sum(hasher: Hasher, path: Path):
     with path.open("rb") as fin:
         while True:
             chunk = fin.read(65536)
