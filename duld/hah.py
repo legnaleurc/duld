@@ -4,7 +4,7 @@ from logging import getLogger
 import os
 import re
 import shutil
-from contextlib import AsyncExitStack, ExitStack, contextmanager
+from contextlib import AsyncExitStack, ExitStack, asynccontextmanager, contextmanager
 from pathlib import Path
 from typing import Coroutine
 
@@ -22,7 +22,7 @@ class HaHContext(object):
 
     async def __aenter__(self):
         async with AsyncExitStack() as stack:
-            stack.enter_context(
+            await stack.enter_async_context(
                 HaHListener(
                     self._hah_path / "log",
                     self._hah_path / "download",
@@ -140,17 +140,17 @@ class HaHListener(object):
         self._watcher = None
         self._raii = None
 
-    def __enter__(self):
-        with ExitStack() as stack:
+    async def __aenter__(self):
+        async with AsyncExitStack() as stack:
             self._watcher = stack.enter_context(Inotify())
             self._watcher.add_watch(self._log_path, Mask.MODIFY)
-            stack.enter_context(non_blocking(self._listen()))
+            await stack.enter_async_context(non_blocking(self._listen()))
             self._raii = stack.pop_all()
         return self
 
-    def __exit__(self, type_, exc, tb):
+    async def __aexit__(self, type_, exc, tb):
         assert self._raii
-        self._raii.close()
+        await self._raii.aclose()
         self._watcher = None
         self._raii = None
 
@@ -163,11 +163,17 @@ class HaHListener(object):
             getLogger(__name__).debug(f"inotify stopped")
 
 
-@contextmanager
-def non_blocking(coro: Coroutine):
+@asynccontextmanager
+async def non_blocking(coro: Coroutine):
     task = asyncio.create_task(coro)
-    yield task
-    task.cancel()
+    try:
+        yield task
+    finally:
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
 
 
 def lines_from_path(path: Path):
