@@ -13,6 +13,7 @@ class DiskSpaceListener(object):
     def __init__(self, transmission: TransmissionData, disk_space: DiskSpaceData):
         self._transmission = transmission
         self._disk_space = disk_space
+        self._halted = False
         self._timer = None
 
     async def __aenter__(self):

@@ -173,7 +173,7 @@ async def non_blocking(coro: Coroutine):
         try:
             await task
         except asyncio.CancelledError:
-            pass
+            getLogger(__name__).debug("stopped hah listener")
 
 
 def lines_from_path(path: Path):
