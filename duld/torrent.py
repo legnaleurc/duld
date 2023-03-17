@@ -72,7 +72,6 @@ async def upload_torrent(
         getLogger(__name__).warning(f"no such torrent id {torrent_id}")
         return
     torrent_name = torrent.name
-    getLogger(__name__).info(f"{torrent_name}: processing")
 
     root_items = get_root_items(torrent)
     if not root_items:
