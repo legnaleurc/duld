@@ -18,7 +18,8 @@ class Daemon(object):
         self._cfg = settings.load_from_path(args.settings)
         dictConfig(
             ConfigBuilder(path=self._cfg.log_path, rotate=True)
-            .add("wcpan", "duld", level="D")
+            .add("duld", level="D")
+            .add("wcpan", level="I")
             .to_dict()
         )
         self._finished = None
