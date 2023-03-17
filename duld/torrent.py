@@ -65,42 +65,36 @@ async def upload_torrent(
     upload_to: str,
     transmission: TransmissionData,
     torrent_id: int,
-):
+) -> None:
     torrent_client = connect_transmission(transmission)
     torrent = torrent_client.get_torrent(torrent_id)
     if not torrent:
         getLogger(__name__).warning(f"no such torrent id {torrent_id}")
         return
-    torrent_name = torrent.name
 
     root_items = get_root_items(torrent)
     if not root_items:
-        getLogger(__name__).warning(f"{torrent_name}: no item to upload?")
+        getLogger(__name__).warning(f"{torrent.name}: no item to upload?")
         return
-    getLogger(__name__).debug(f"{torrent_name}: {root_items}")
+    getLogger(__name__).debug(f"{torrent.name}: {root_items}")
 
-    getLogger(__name__).info(f"{torrent_name}: begin uploading")
     torrent_root = torrent.download_dir
     if not torrent_root:
-        getLogger(__name__).info(f"{torrent_name}: invalid location")
+        getLogger(__name__).error(f"{torrent.name}: invalid location")
         return
 
     # upload files to Cloud Drive
-    ok = False
     try:
-        ok = await uploader.upload_torrent(
+        await uploader.upload_torrent(
             PurePath(upload_to), torrent_id, torrent_root, root_items
         )
     except Exception:
         getLogger(__name__).exception("upload failed")
-    if not ok:
-        getLogger(__name__).info(f"{torrent_name}: upload failed")
-        getLogger(__name__).info(f"retry url: /api/v1/torrents/{torrent_id}")
+        getLogger(__name__).error(f"retry url: /api/v1/torrents/{torrent_id}")
         return
 
-    getLogger(__name__).info(f"{torrent_name}: remove torrent")
     # remove the task from Transmission first
-    remove_torrent(torrent_client, torrent_id)
+    remove_torrent(torrent_client, torrent)
 
 
 def get_completed(transmission: TransmissionData) -> list[Torrent]:
@@ -124,8 +118,9 @@ def get_root_items(torrent: Torrent) -> list[str]:
     return list(common)
 
 
-def remove_torrent(client: Client, torrent_id: int) -> None:
-    client.remove_torrent(torrent_id, delete_data=True)
+def remove_torrent(client: Client, torrent: Torrent) -> None:
+    client.remove_torrent(torrent.id, delete_data=True)
+    getLogger(__name__).info(f"{torrent.name}: remove torrent")
 
 
 def split_all(path: str) -> list[str]:

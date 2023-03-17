@@ -200,13 +200,17 @@ def parse_name(line: str):
     return rv.group(1)
 
 
-async def upload(uploader: DriveUploader, dst_path: Path, src_path: Path):
+async def upload(uploader: DriveUploader, dst_path: Path, src_path: Path) -> None:
     if not src_path.exists():
         getLogger(__name__).debug(f"hah ignored deleted path {src_path}")
         return
     getLogger(__name__).debug(f"hah upload {src_path}")
-    ok = await uploader.upload_path(dst_path, src_path)
-    if not ok:
+    try:
+        await uploader.upload_path(dst_path, src_path)
+    except Exception:
+        getLogger(__name__).exception(
+            f"trying to upload {src_path} to {dst_path} but failed"
+        )
         return
     getLogger(__name__).debug(f"rm -rf {src_path}")
     shutil.rmtree(src_path, ignore_errors=True)
