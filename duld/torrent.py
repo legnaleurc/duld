@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import asynccontextmanager
 from logging import getLogger
 import os.path
 from pathlib import PurePath
@@ -7,57 +8,6 @@ from transmission_rpc import Client, Torrent
 
 from .drive import DriveUploader
 from .settings import DiskSpaceData, TransmissionData
-
-
-class DiskSpaceListener(object):
-    def __init__(self, transmission: TransmissionData, disk_space: DiskSpaceData):
-        self._transmission = transmission
-        self._disk_space = disk_space
-        self._halted = False
-        self._timer = None
-
-    async def __aenter__(self):
-        self._timer = asyncio.create_task(self._loop())
-        return self
-
-    async def __aexit__(self, type_, exc, tb):
-        assert self._timer
-        self._timer.cancel()
-        try:
-            await self._timer
-        except asyncio.CancelledError:
-            getLogger(__name__).debug("stopped disk space listener")
-        self._timer = None
-
-    async def _loop(self):
-        # check space every minute
-        while True:
-            await asyncio.sleep(60)
-            self._check_space()
-
-    def _check_space(self):
-        torrent_client = connect_transmission(self._transmission)
-        torrent_session = torrent_client.get_session()
-        download_dir = torrent_session.download_dir
-        free_space = torrent_client.free_space(download_dir)
-        if free_space is None:
-            return
-        free_space_in_gb = free_space / 1024 / 1024 / 1024
-
-        if free_space_in_gb >= self._disk_space.safe:
-            if self._halted:
-                getLogger(__name__).info(
-                    f"resuming halted torrents: {free_space_in_gb}"
-                )
-                resume_halted_torrents(torrent_client)
-                self._halted = False
-            return
-        if free_space_in_gb <= self._disk_space.danger:
-            if not self._halted:
-                getLogger(__name__).info(f"halting queued torrents: {free_space_in_gb}")
-                halt_pending_torrents(torrent_client)
-                self._halted = True
-            return
 
 
 async def upload_torrent(
@@ -151,6 +101,53 @@ def connect_transmission(transmission: TransmissionData) -> Client:
         password=opt.password,
     )
     return client
+
+
+@asynccontextmanager
+async def disk_space_watcher(transmission: TransmissionData, disk_space: DiskSpaceData):
+    async with asyncio.TaskGroup() as group:
+        task = group.create_task(watch_disk_space(transmission, disk_space))
+        try:
+            yield
+        finally:
+            task.cancel()
+
+
+async def watch_disk_space(transmission: TransmissionData, disk_space: DiskSpaceData):
+    halted = False
+    while True:
+        await asyncio.sleep(60)
+        halted = check_disk_space(transmission, disk_space, halted)
+
+
+def check_disk_space(
+    transmission: TransmissionData, disk_space: DiskSpaceData, halted: bool
+) -> bool:
+    if disk_space.safe >= disk_space.danger:
+        raise ValueError("invalid disk space range")
+
+    torrent_client = connect_transmission(transmission)
+    torrent_session = torrent_client.get_session()
+    download_dir = torrent_session.download_dir
+    free_space = torrent_client.free_space(download_dir)
+    if free_space is None:
+        getLogger(__name__).warning("cannot get free space")
+        return halted
+    free_space_in_gb = free_space / 1024 / 1024 / 1024
+
+    if free_space_in_gb >= disk_space.safe:
+        if halted:
+            getLogger(__name__).info(f"resuming halted torrents: {free_space_in_gb}")
+            resume_halted_torrents(torrent_client)
+        return False
+
+    if free_space_in_gb <= disk_space.danger:
+        if not halted:
+            getLogger(__name__).info(f"halting queued torrents: {free_space_in_gb}")
+            halt_pending_torrents(torrent_client)
+        return True
+
+    return halted
 
 
 def halt_pending_torrents(client: Client) -> None:

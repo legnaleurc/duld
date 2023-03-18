@@ -13,7 +13,7 @@ from .api import HaHHandler, TorrentsHandler
 from .drive import DriveUploader
 from .hah import HaHContext
 from .settings import load_from_path
-from .torrent import DiskSpaceListener
+from .torrent import disk_space_watcher
 
 
 class Daemon(object):
@@ -74,7 +74,7 @@ class Daemon(object):
 
             if self._cfg.transmission and self._cfg.reserved_space_in_gb:
                 await stack.enter_async_context(
-                    DiskSpaceListener(
+                    disk_space_watcher(
                         self._cfg.transmission, self._cfg.reserved_space_in_gb
                     )
                 )
