@@ -4,111 +4,14 @@ from logging import getLogger
 import os
 import re
 import shutil
-from collections.abc import Callable, Coroutine
-from contextlib import AsyncExitStack, asynccontextmanager
-from pathlib import Path
+from pathlib import Path, PurePath
 
 from asyncinotify import Inotify, Mask
 
 from .drive import DriveUploader
 
 
-class HaHContext(object):
-    def __init__(self, hah_path: str, upload_to: str, uploader: DriveUploader):
-        self._hah_path = Path(hah_path)
-        self._upload_to = Path(upload_to)
-        self._uploader = uploader
-        self._raii = None
-
-    async def __aenter__(self):
-        async with AsyncExitStack() as stack:
-            await stack.enter_async_context(
-                LogWatcher(
-                    self._hah_path / "log",
-                    self._hah_path / "download",
-                    self._upload,
-                )
-            )
-            self._raii = stack.pop_all()
-        return self
-
-    async def __aexit__(self, type_, exc, tb):
-        assert self._raii
-        await self._raii.aclose()
-        self._raii = None
-
-    def scan_finished(self) -> list[str]:
-        lines = get_existing_logs(self._hah_path)
-        folders = (parse_folder_name(_) for _ in lines)
-        folder_table = {_[0]: _[1] for _ in folders if _}
-        finished = (parse_name(_) for _ in lines)
-        finished = (folder_table.get(_, None) for _ in finished if _)
-        finished_list = [_ for _ in finished if _]
-
-        for real_name in finished_list:
-            real_path = self._hah_path / "download" / real_name
-            # TODO handle cancel
-            asyncio.create_task(self._upload(real_path))
-
-        return finished_list
-
-    async def _upload(self, src_path: Path) -> None:
-        if not src_path.exists():
-            getLogger(__name__).info(f"hah ignored deleted path {src_path}")
-            return
-        getLogger(__name__).info(f"hah upload {src_path}")
-        try:
-            await self._uploader.upload_path(self._upload_to, src_path)
-        except Exception:
-            getLogger(__name__).exception(
-                f"trying to upload {src_path} to {self._upload_to} but failed"
-            )
-            return
-        getLogger(__name__).debug(f"rm -rf {src_path}")
-        shutil.rmtree(src_path, ignore_errors=True)
-
-
-class LogWatcher(object):
-    def __init__(
-        self,
-        log_path: Path,
-        download_path: Path,
-        upload: Callable[[Path], Coroutine[None, None, None]],
-    ):
-        self._log_path = log_path
-        path = log_path / "log_out"
-        self._parse = LogParser(path, download_path)
-        self._upload = upload
-        self._watcher = None
-        self._raii = None
-
-    async def __aenter__(self):
-        async with AsyncExitStack() as stack:
-            self._watcher = stack.enter_context(Inotify())
-            self._watcher.add_watch(self._log_path, Mask.MODIFY)
-            await stack.enter_async_context(non_blocking(self._listen()))
-            self._raii = stack.pop_all()
-        return self
-
-    async def __aexit__(self, type_, exc, tb):
-        assert self._raii
-        await self._raii.aclose()
-        self._watcher = None
-        self._raii = None
-
-    async def _listen(self):
-        assert self._watcher
-        try:
-            async for _event in self._watcher:
-                path_list = self._parse()
-                for path in path_list:
-                    # TODO handle cancel
-                    asyncio.create_task(self._upload(path))
-        except Exception:
-            getLogger(__name__).exception(f"failed to pull from inotify")
-
-
-class LogParser(object):
+class _LogParser(object):
     def __init__(
         self,
         log_path: Path,
@@ -168,31 +71,55 @@ class LogParser(object):
         return paths[0]
 
 
-@asynccontextmanager
-async def non_blocking(coro: Coroutine[None, None, None]):
-    task = asyncio.create_task(coro)
-    try:
-        yield task
-    finally:
-        task.cancel()
+async def watch_hah_log(
+    *,
+    hah_path: Path,
+    uploader: DriveUploader,
+    upload_to: PurePath,
+):
+    log_path = hah_path / "log"
+    download_path = hah_path / "download"
+    parse = _LogParser(log_path / "log_out", download_path)
+    with Inotify() as watcher:
+        watcher.add_watch(log_path, Mask.MODIFY)
         try:
-            await task
-        except asyncio.CancelledError:
-            getLogger(__name__).debug("stopped hah log watcher")
+            async for _event in watcher:
+                path_list = parse()
+                for path in path_list:
+                    # TODO handle cancel
+                    asyncio.create_task(_upload(uploader, path, upload_to))
+        except Exception:
+            getLogger(__name__).exception(f"failed to pull from inotify")
 
 
-def get_existing_logs(path: Path) -> list[str]:
-    old_lines = lines_from_path(path / "log" / "log_out.old")
-    lines = lines_from_path(path / "log" / "log_out")
+def upload_finished(*, hah_path: Path, uploader: DriveUploader, upload_to: PurePath):
+    lines = _get_existing_logs(hah_path)
+    folders = (_parse_folder_name(_) for _ in lines)
+    folder_table = {_[0]: _[1] for _ in folders if _}
+    finished = (_parse_name(_) for _ in lines)
+    finished = (folder_table.get(_, None) for _ in finished if _)
+    finished_list = [_ for _ in finished if _]
+
+    for real_name in finished_list:
+        real_path = hah_path / "download" / real_name
+        # TODO handle cancel
+        asyncio.create_task(_upload(uploader, real_path, upload_to))
+
+    return finished_list
+
+
+def _get_existing_logs(path: Path) -> list[str]:
+    old_lines = _lines_from_path(path / "log" / "log_out.old")
+    lines = _lines_from_path(path / "log" / "log_out")
     return old_lines + lines
 
 
-def lines_from_path(path: Path) -> list[str]:
+def _lines_from_path(path: Path) -> list[str]:
     with open(path, "r") as fin:
         return list(fin.readlines())
 
 
-def parse_folder_name(line: str) -> tuple[str, str] | None:
+def _parse_folder_name(line: str) -> tuple[str, str] | None:
     rv = re.search(r"Created directory download/(.*)", line)
     if not rv:
         return None
@@ -204,8 +131,24 @@ def parse_folder_name(line: str) -> tuple[str, str] | None:
     return (name, real_name)
 
 
-def parse_name(line: str) -> str | None:
+def _parse_name(line: str) -> str | None:
     rv = re.search(r"Finished download of gallery: (.*)", line)
     if not rv:
         return None
     return rv.group(1)
+
+
+async def _upload(uploader: DriveUploader, src_path: Path, dst_path: PurePath) -> None:
+    if not src_path.exists():
+        getLogger(__name__).info(f"hah ignored deleted path {src_path}")
+        return
+    getLogger(__name__).info(f"hah upload {src_path}")
+    try:
+        await uploader.upload_from_path(dst_path, src_path)
+    except Exception:
+        getLogger(__name__).exception(
+            f"trying to upload {src_path} to {dst_path} but failed"
+        )
+        return
+    getLogger(__name__).debug(f"rm -rf {src_path}")
+    shutil.rmtree(src_path, ignore_errors=True)

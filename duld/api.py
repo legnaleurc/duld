@@ -1,12 +1,14 @@
 import asyncio
 import json
+from pathlib import Path, PurePath
 
 from aiohttp.web import View, Response
 from aiohttp.web_exceptions import HTTPBadRequest, HTTPInternalServerError
 
-from .hah import HaHContext
+from .drive import DriveUploader
+from .hah import upload_finished
 from .settings import Data
-from .torrent import get_completed, upload_torrent
+from .torrent import get_completed, upload_by_id
 
 
 class TorrentsHandler(View):
@@ -16,10 +18,15 @@ class TorrentsHandler(View):
             raise HTTPInternalServerError
 
         torrents = get_completed(ctx.transmission)
-        uploader = self.request.app["uploader"]
+        uploader: DriveUploader = self.request.app["uploader"]
         for t in torrents:
             asyncio.create_task(
-                upload_torrent(uploader, ctx.upload_to, ctx.transmission, t.id)
+                upload_by_id(
+                    uploader=uploader,
+                    upload_to=PurePath(ctx.upload_to),
+                    transmission=ctx.transmission,
+                    torrent_id=t.id,
+                )
             )
         result = json.dumps([_.id for _ in torrents])
         result = result + "\n"
@@ -34,17 +41,30 @@ class TorrentsHandler(View):
         if not torrent_id:
             raise HTTPBadRequest
 
-        uploader = self.request.app["uploader"]
+        uploader: DriveUploader = self.request.app["uploader"]
         asyncio.create_task(
-            upload_torrent(uploader, ctx.upload_to, ctx.transmission, int(torrent_id))
+            upload_by_id(
+                uploader=uploader,
+                upload_to=PurePath(ctx.upload_to),
+                transmission=ctx.transmission,
+                torrent_id=int(torrent_id),
+            )
         )
         return Response(status=204)
 
 
 class HaHHandler(View):
     async def post(self):
-        hah_context: HaHContext = self.request.app["hah"]
-        folders = hah_context.scan_finished()
+        ctx: Data = self.request.app["ctx"]
+        if not ctx.hah_path:
+            raise HTTPInternalServerError
+
+        uploader: DriveUploader = self.request.app["uploader"]
+        folders = upload_finished(
+            hah_path=Path(ctx.hah_path),
+            uploader=uploader,
+            upload_to=PurePath(ctx.upload_to),
+        )
         result = json.dumps(folders)
         result = result + "\n"
         return Response(text=result, content_type="application/json")

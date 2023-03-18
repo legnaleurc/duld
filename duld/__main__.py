@@ -2,18 +2,24 @@ import asyncio
 import argparse
 from logging import getLogger
 from logging.config import dictConfig
+from pathlib import Path, PurePath
 import signal
 import sys
+from collections.abc import Coroutine
 from contextlib import AsyncExitStack, asynccontextmanager
+from typing import TypeAlias
 
 from aiohttp.web import Application, AppRunner, TCPSite
 from wcpan.logging import ConfigBuilder
 
 from .api import HaHHandler, TorrentsHandler
 from .drive import DriveUploader
-from .hah import HaHContext
+from .hah import watch_hah_log
 from .settings import load_from_path
-from .torrent import disk_space_watcher
+from .torrent import watch_disk_space
+
+
+Runnable: TypeAlias = Coroutine[None, None, None]
 
 
 class Daemon(object):
@@ -63,19 +69,23 @@ class Daemon(object):
             app["uploader"] = uploader
 
             if self._cfg.hah_path:
-                hah_context = await stack.enter_async_context(
-                    HaHContext(
-                        self._cfg.hah_path,
-                        self._cfg.upload_to,
-                        uploader,
+                await stack.enter_async_context(
+                    background(
+                        watch_hah_log(
+                            hah_path=Path(self._cfg.hah_path),
+                            uploader=uploader,
+                            upload_to=PurePath(self._cfg.upload_to),
+                        )
                     )
                 )
-                app["hah"] = hah_context
 
             if self._cfg.transmission and self._cfg.reserved_space_in_gb:
                 await stack.enter_async_context(
-                    disk_space_watcher(
-                        self._cfg.transmission, self._cfg.reserved_space_in_gb
+                    background(
+                        watch_disk_space(
+                            transmission=self._cfg.transmission,
+                            disk_space=self._cfg.reserved_space_in_gb,
+                        )
                     )
                 )
 
@@ -107,6 +117,16 @@ async def server_context(app: Application, port: int):
         yield
     finally:
         await runner.cleanup()
+
+
+@asynccontextmanager
+async def background(c: Runnable):
+    async with asyncio.TaskGroup() as group:
+        task = group.create_task(c)
+        try:
+            yield
+        finally:
+            task.cancel()
 
 
 def parse_args(args):

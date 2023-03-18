@@ -14,11 +14,11 @@ from wcpan.drive.core.exceptions import CacheError
 from wcpan.drive.core.types import Node
 
 
+RETRY_TIMES = 3
+
+
 class UploadError(Exception):
     pass
-
-
-RETRY_TIMES = 3
 
 
 class DriveUploader:
@@ -50,7 +50,7 @@ class DriveUploader:
         self._pool = None
         self._raii = None
 
-    async def upload_path(self, remote_path: Path, local_path: Path) -> None:
+    async def upload_from_path(self, remote_path: PurePath, local_path: Path) -> None:
         assert self._drive
 
         if local_path in self._jobs:
@@ -66,7 +66,7 @@ class DriveUploader:
 
             await self._upload(node, local_path)
 
-    async def upload_torrent(
+    async def upload_from_torrent(
         self,
         remote_path: PurePath,
         torrent_id: int,
