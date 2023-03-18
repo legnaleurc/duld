@@ -123,7 +123,7 @@ async def watch_disk_space(transmission: TransmissionData, disk_space: DiskSpace
 def check_disk_space(
     transmission: TransmissionData, disk_space: DiskSpaceData, halted: bool
 ) -> bool:
-    if disk_space.safe >= disk_space.danger:
+    if disk_space.safe <= disk_space.danger:
         raise ValueError("invalid disk space range")
 
     torrent_client = connect_transmission(transmission)
