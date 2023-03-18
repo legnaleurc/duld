@@ -23,7 +23,7 @@ class HaHContext(object):
     async def __aenter__(self):
         async with AsyncExitStack() as stack:
             await stack.enter_async_context(
-                HaHListener(
+                LogWatcher(
                     self._hah_path / "log",
                     self._hah_path / "download",
                     self._upload_to,
@@ -61,11 +61,47 @@ class HaHContext(object):
                 real_path = self._hah_path / "download" / real_name
                 await upload(self._uploader, self._upload_to, real_path)
             except Exception:
-                # just skip error tasks
-                pass
+                getLogger(__name__).exception("unexpected error")
 
 
-class HaHEventHandler(object):
+class LogWatcher(object):
+    def __init__(
+        self,
+        log_path: Path,
+        download_path: Path,
+        upload_path: Path,
+        uploader: DriveUploader,
+    ):
+        self._log_path = log_path
+        path = log_path / "log_out"
+        self._parse = LogParser(path, download_path, upload_path, uploader)
+        self._watcher = None
+        self._raii = None
+
+    async def __aenter__(self):
+        async with AsyncExitStack() as stack:
+            self._watcher = stack.enter_context(Inotify())
+            self._watcher.add_watch(self._log_path, Mask.MODIFY)
+            await stack.enter_async_context(non_blocking(self._listen()))
+            self._raii = stack.pop_all()
+        return self
+
+    async def __aexit__(self, type_, exc, tb):
+        assert self._raii
+        await self._raii.aclose()
+        self._watcher = None
+        self._raii = None
+
+    async def _listen(self):
+        assert self._watcher
+        try:
+            async for event in self._watcher:
+                await self._parse(event)
+        except Exception:
+            getLogger(__name__).exception(f"failed to pull from inotify")
+
+
+class LogParser(object):
     def __init__(
         self,
         log_path: Path,
@@ -80,7 +116,7 @@ class HaHEventHandler(object):
         self._index = log_path.stat().st_size
         self._lines = []
 
-    async def on_modified(self, event):
+    async def __call__(self, event):
         if self._log_path.stat().st_size < self._index:
             self._index = 0
         with open(self._log_path, "r") as fin:
@@ -126,43 +162,6 @@ class HaHEventHandler(object):
         await upload(self._uploader, self._upload_path, paths[0])
 
 
-class HaHListener(object):
-    def __init__(
-        self,
-        log_path: Path,
-        download_path: Path,
-        upload_path: Path,
-        uploader: DriveUploader,
-    ):
-        self._log_path = log_path
-        path = log_path / "log_out"
-        self._handler = HaHEventHandler(path, download_path, upload_path, uploader)
-        self._watcher = None
-        self._raii = None
-
-    async def __aenter__(self):
-        async with AsyncExitStack() as stack:
-            self._watcher = stack.enter_context(Inotify())
-            self._watcher.add_watch(self._log_path, Mask.MODIFY)
-            await stack.enter_async_context(non_blocking(self._listen()))
-            self._raii = stack.pop_all()
-        return self
-
-    async def __aexit__(self, type_, exc, tb):
-        assert self._raii
-        await self._raii.aclose()
-        self._watcher = None
-        self._raii = None
-
-    async def _listen(self):
-        assert self._watcher
-        try:
-            async for event in self._watcher:
-                await self._handler.on_modified(event)
-        except Exception:
-            getLogger(__name__).debug(f"inotify stopped")
-
-
 @asynccontextmanager
 async def non_blocking(coro: Coroutine):
     task = asyncio.create_task(coro)
@@ -173,7 +172,7 @@ async def non_blocking(coro: Coroutine):
         try:
             await task
         except asyncio.CancelledError:
-            getLogger(__name__).debug("stopped hah listener")
+            getLogger(__name__).debug("stopped hah log watcher")
 
 
 def lines_from_path(path: Path):
@@ -202,9 +201,9 @@ def parse_name(line: str):
 
 async def upload(uploader: DriveUploader, dst_path: Path, src_path: Path) -> None:
     if not src_path.exists():
-        getLogger(__name__).debug(f"hah ignored deleted path {src_path}")
+        getLogger(__name__).info(f"hah ignored deleted path {src_path}")
         return
-    getLogger(__name__).debug(f"hah upload {src_path}")
+    getLogger(__name__).info(f"hah upload {src_path}")
     try:
         await uploader.upload_path(dst_path, src_path)
     except Exception:
