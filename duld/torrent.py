@@ -111,6 +111,7 @@ async def disk_space_watcher(transmission: TransmissionData, disk_space: DiskSpa
             yield
         finally:
             task.cancel()
+            getLogger(__name__).debug("stopped disk space watcher")
 
 
 async def watch_disk_space(transmission: TransmissionData, disk_space: DiskSpaceData):
