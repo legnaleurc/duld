@@ -9,13 +9,17 @@ from contextlib import AsyncExitStack, asynccontextmanager
 from aiohttp.web import Application, AppRunner, TCPSite
 from wcpan.logging import ConfigBuilder
 
-from . import api, drive, hah, settings, torrent
+from .api import HaHHandler, TorrentsHandler
+from .drive import DriveUploader
+from .hah import HaHContext
+from .settings import load_from_path
+from .torrent import DiskSpaceListener
 
 
 class Daemon(object):
     def __init__(self, args):
         args = parse_args(args)
-        self._cfg = settings.load_from_path(args.settings)
+        self._cfg = load_from_path(args.settings)
         dictConfig(
             ConfigBuilder(path=self._cfg.log_path, rotate=True)
             .add("duld", level="D")
@@ -42,18 +46,16 @@ class Daemon(object):
         app = Application()
 
         if self._cfg.transmission:
-            app.router.add_view(r"/api/v1/torrents", api.TorrentsHandler)
-            app.router.add_view(
-                r"/api/v1/torrents/{torrent_id:\d+}", api.TorrentsHandler
-            )
+            app.router.add_view(r"/api/v1/torrents", TorrentsHandler)
+            app.router.add_view(r"/api/v1/torrents/{torrent_id:\d+}", TorrentsHandler)
         if self._cfg.hah_path:
-            app.router.add_view(r"/api/v1/hah", api.HaHHandler)
+            app.router.add_view(r"/api/v1/hah", HaHHandler)
 
         async with AsyncExitStack() as stack:
             app["ctx"] = self._cfg
 
             uploader = await stack.enter_async_context(
-                drive.DriveUploader(
+                DriveUploader(
                     exclude_pattern=self._cfg.exclude_pattern,
                     exclude_url=self._cfg.exclude_url,
                 )
@@ -62,7 +64,7 @@ class Daemon(object):
 
             if self._cfg.hah_path:
                 hah_context = await stack.enter_async_context(
-                    hah.HaHContext(
+                    HaHContext(
                         self._cfg.hah_path,
                         self._cfg.upload_to,
                         uploader,
@@ -72,7 +74,7 @@ class Daemon(object):
 
             if self._cfg.transmission and self._cfg.reserved_space_in_gb:
                 await stack.enter_async_context(
-                    torrent.DiskSpaceListener(
+                    DiskSpaceListener(
                         self._cfg.transmission, self._cfg.reserved_space_in_gb
                     )
                 )
