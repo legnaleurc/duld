@@ -4,9 +4,9 @@ from logging import getLogger
 import os
 import re
 import shutil
+from collections.abc import Callable, Coroutine
 from contextlib import AsyncExitStack, asynccontextmanager
 from pathlib import Path
-from typing import Callable, Coroutine
 
 from asyncinotify import Inotify, Mask
 
