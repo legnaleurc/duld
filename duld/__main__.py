@@ -22,7 +22,7 @@ class Daemon(object):
         self._cfg = load_from_path(args.settings)
         dictConfig(
             ConfigBuilder(path=self._cfg.log_path, rotate=True)
-            .add("duld", level="D")
+            .add("duld", "__main__", level="D")
             .add("wcpan", level="I")
             .to_dict()
         )
