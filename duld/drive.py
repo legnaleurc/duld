@@ -10,6 +10,7 @@ import aiohttp
 from wcpan.drive.cli.util import get_media_info
 from wcpan.drive.core.abc import Hasher
 from wcpan.drive.core.drive import DriveFactory, upload_from_local
+from wcpan.drive.core.exceptions import CacheError
 from wcpan.drive.core.types import Node
 
 
@@ -137,13 +138,7 @@ class DriveUploader:
 
         # Need to update local cache for the added folder.
         # In theory we should pass remote path instead of doing this.
-        while True:
-            try:
-                await self._drive.get_path(child_node)
-                break
-            except Exception:
-                getLogger(__name__).exception(f"error on updating local cache")
-            await self._sync()
+        await self._ensure_node_exists(child_node)
 
         for child_path in local_path.iterdir():
             await self._upload(child_node, child_path)
@@ -255,6 +250,18 @@ class DriveUploader:
                         return True
 
         return False
+
+    async def _ensure_node_exists(self, node: Node) -> None:
+        assert self._drive
+        while True:
+            try:
+                await self._drive.get_path(node)
+                break
+            except CacheError:
+                getLogger(__name__).info(f"not in cache")
+            except Exception:
+                getLogger(__name__).exception(f"error on updating local cache")
+            await self._sync()
 
 
 def md5sum(hasher: Hasher, path: Path):
