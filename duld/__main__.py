@@ -81,6 +81,7 @@ class Daemon(object):
 
             await stack.enter_async_context(server_context(app, self._cfg.port))
 
+            getLogger(__name__).info("server started")
             await self._wait_for_finished()
 
         return 0
