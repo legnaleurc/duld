@@ -110,23 +110,19 @@ files = [
 frozenlist = ">=1.1.0"
 
 [[package]]
-name = "arrow"
-version = "1.3.0"
-description = "Better dates & times for Python"
+name = "aiosqlite"
+version = "0.19.0"
+description = "asyncio bridge to the standard sqlite3 module"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.7"
 files = [
-    {file = "arrow-1.3.0-py3-none-any.whl", hash = "sha256:c728b120ebc00eb84e01882a6f5e7927a53960aa990ce7dd2b10f39005a67f80"},
-    {file = "arrow-1.3.0.tar.gz", hash = "sha256:d4540617648cb5f895730f1ad8c82a65f2dad0166f57b75f3ca54759c4d67a85"},
+    {file = "aiosqlite-0.19.0-py3-none-any.whl", hash = "sha256:edba222e03453e094a3ce605db1b970c4b3376264e56f32e2a4959f948d66a96"},
+    {file = "aiosqlite-0.19.0.tar.gz", hash = "sha256:95ee77b91c8d2808bd08a59fbebf66270e9090c3d92ffbf260dc0db0b979577d"},
 ]
 
-[package.dependencies]
-python-dateutil = ">=2.7.0"
-types-python-dateutil = ">=2.8.10"
-
 [package.extras]
-doc = ["doc8", "sphinx (>=7.0.0)", "sphinx-autobuild", "sphinx-autodoc-typehints", "sphinx_rtd_theme (>=1.3.0)"]
-test = ["dateparser (==1.*)", "pre-commit", "pytest", "pytest-cov", "pytest-mock", "pytz (==2021.1)", "simplejson (==3.*)"]
+dev = ["aiounittest (==1.4.1)", "attribution (==1.6.2)", "black (==23.3.0)", "coverage[toml] (==7.2.3)", "flake8 (==5.0.4)", "flake8-bugbear (==23.3.12)", "flit (==3.7.1)", "mypy (==1.2.0)", "ufmt (==2.1.0)", "usort (==1.0.6)"]
+docs = ["sphinx (==6.1.3)", "sphinx-mdinclude (==0.5.3)"]
 
 [[package]]
 name = "asyncinotify"
@@ -670,20 +666,6 @@ docs = ["furo (>=2023.7.26)", "proselint (>=0.13)", "sphinx (>=7.1.1)", "sphinx-
 test = ["appdirs (==1.4.4)", "covdefaults (>=2.3)", "pytest (>=7.4)", "pytest-cov (>=4.1)", "pytest-mock (>=3.11.1)"]
 
 [[package]]
-name = "python-dateutil"
-version = "2.8.2"
-description = "Extensions to the standard Python datetime module"
-optional = false
-python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
-files = [
-    {file = "python-dateutil-2.8.2.tar.gz", hash = "sha256:0123cacc1627ae19ddf3c27a5de5bd67ee4586fbdd6440d9748f8abb483d3e86"},
-    {file = "python_dateutil-2.8.2-py2.py3-none-any.whl", hash = "sha256:961d03dc3453ebbc59dbdea9e4e11c5651520a876d0f4db161e8674aae935da9"},
-]
-
-[package.dependencies]
-six = ">=1.5"
-
-[[package]]
 name = "pyyaml"
 version = "6.0.1"
 description = "YAML parser and emitter for Python"
@@ -764,17 +746,6 @@ socks = ["PySocks (>=1.5.6,!=1.5.7)"]
 use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
 
 [[package]]
-name = "six"
-version = "1.16.0"
-description = "Python 2 and 3 compatibility utilities"
-optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*"
-files = [
-    {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
-    {file = "six-1.16.0.tar.gz", hash = "sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926"},
-]
-
-[[package]]
 name = "transmission-rpc"
 version = "4.3.1"
 description = "Python module that implements the Transmission bittorent client JSON-RPC protocol"
@@ -788,17 +759,6 @@ files = [
 [package.dependencies]
 requests = ">=2.23.0,<3.0.0"
 typing-extensions = "*"
-
-[[package]]
-name = "types-python-dateutil"
-version = "2.8.19.14"
-description = "Typing stubs for python-dateutil"
-optional = false
-python-versions = "*"
-files = [
-    {file = "types-python-dateutil-2.8.19.14.tar.gz", hash = "sha256:1f4f10ac98bb8b16ade9dbee3518d9ace017821d94b057a425b069f834737f4b"},
-    {file = "types_python_dateutil-2.8.19.14-py3-none-any.whl", hash = "sha256:f977b8de27787639986b4e28963263fd0e5158942b3ecef91b9335c130cb1ce9"},
-]
 
 [[package]]
 name = "typing-extensions"
@@ -829,68 +789,77 @@ zstd = ["zstandard (>=0.18.0)"]
 
 [[package]]
 name = "wcpan-drive-cli"
-version = "2.3.6"
+version = "3.0.0"
 description = "command line tool for wcpan.drive"
 optional = false
-python-versions = ">=3.11,<4.0"
+python-versions = ">=3.12,<4.0"
 files = [
-    {file = "wcpan_drive_cli-2.3.6-py3-none-any.whl", hash = "sha256:5da6574371305354d2687f0e314dffdbb3cc0d314b59fe1e0e9480fec01dac60"},
-    {file = "wcpan_drive_cli-2.3.6.tar.gz", hash = "sha256:4227fe8a58450b5586a4eb88e04a902d0d3681f6f4f5c5407a87b47dc6dfb6f8"},
+    {file = "wcpan_drive_cli-3.0.0-py3-none-any.whl", hash = "sha256:87d500c1608565b83b9af3560678522598997cd1953361937cc093481cb42e37"},
+    {file = "wcpan_drive_cli-3.0.0.tar.gz", hash = "sha256:d445050f33b6ef7ebe2863ab66b5b0219424190197bcf85d4d83e24923d0133a"},
 ]
 
 [package.dependencies]
 Pillow = ">=9,<11"
-PyYAML = ">=6.0,<7.0"
-wcpan-drive-core = ">=3.1.0,<4.0.0"
-wcpan-logging = ">=2.0.1,<3.0.0"
-wcpan-queue = ">=7.0.0,<8.0.0"
+PyYAML = ">=6.0.1,<7.0.0"
+wcpan-drive-core = ">=4.0.0,<5.0.0"
+wcpan-logging = ">=2.0.3,<3.0.0"
+wcpan-queue = ">=7.2.0,<8.0.0"
 
 [[package]]
 name = "wcpan-drive-core"
-version = "3.2.1"
+version = "4.0.0"
 description = "asynchronous generic cloud drive library"
 optional = false
-python-versions = ">=3.11,<4.0"
+python-versions = ">=3.12,<4.0"
 files = [
-    {file = "wcpan_drive_core-3.2.1-py3-none-any.whl", hash = "sha256:fdde18927e6b495ed7a95af09ea72ca810da518648839c0676ba0ce9d3bcd445"},
-    {file = "wcpan_drive_core-3.2.1.tar.gz", hash = "sha256:4982232342be56e20fa3af3e0a36997c457889154adb22e560b2941da7fb88f2"},
+    {file = "wcpan_drive_core-4.0.0-py3-none-any.whl", hash = "sha256:d9dd171de038426aef06745093c9955b8c991f55578d66b5d567afaf35e3ce02"},
+    {file = "wcpan_drive_core-4.0.0.tar.gz", hash = "sha256:fb7ce8590e3c923c3147c86518d1bd0b6faa08309a6169c8820c1720e0669fda"},
 ]
-
-[package.dependencies]
-arrow = ">=1.2.3,<2.0.0"
-PyYAML = ">=6.0,<7.0"
 
 [[package]]
 name = "wcpan-drive-crypt"
-version = "3.1.0"
+version = "4.0.0"
 description = "crypt middleware for wcpan.drive"
 optional = false
-python-versions = ">=3.10,<4.0"
+python-versions = ">=3.12,<4.0"
 files = [
-    {file = "wcpan_drive_crypt-3.1.0-py3-none-any.whl", hash = "sha256:d2fa12e0460fafc5d27be9bcba0b46df1dce4ace9beb63f8a08b2a880fe2e686"},
-    {file = "wcpan_drive_crypt-3.1.0.tar.gz", hash = "sha256:a3767bedad66cc7016e383a485223eb3a139893647dec110704fa9af56413c87"},
+    {file = "wcpan_drive_crypt-4.0.0-py3-none-any.whl", hash = "sha256:1a23ad71912acc69c764c0ea9e2c356166aa55004b576eca426376b20822d11c"},
+    {file = "wcpan_drive_crypt-4.0.0.tar.gz", hash = "sha256:f399bba14f738348f42296d589e803d9aa0b2d0f2f08ceed6335968618287dd1"},
 ]
 
 [package.dependencies]
 numpy = ">=1.18.0,<2.0.0"
-"wcpan.drive.core" = ">=3.0.0,<4.0.0"
+wcpan-drive-core = ">=4.0.0,<5.0.0"
 
 [[package]]
 name = "wcpan-drive-google"
-version = "8.1.1"
+version = "9.0.0"
 description = "Google Drive driver for wcpan.drive"
 optional = false
-python-versions = ">=3.11,<4.0"
+python-versions = ">=3.12,<4.0"
 files = [
-    {file = "wcpan_drive_google-8.1.1-py3-none-any.whl", hash = "sha256:7008870279dd8a22f1bd7d3a44a1e290e5c7737c154a74d7b56cd3051513cf76"},
-    {file = "wcpan_drive_google-8.1.1.tar.gz", hash = "sha256:109deaabec5ccbe8313e65a9d7f2f874d3b741160b15714be610a27aa236d071"},
+    {file = "wcpan_drive_google-9.0.0-py3-none-any.whl", hash = "sha256:39453e57c648d378383e2d5fa768b6351eaaa95669ded810c0f2cbd71aea5f48"},
+    {file = "wcpan_drive_google-9.0.0.tar.gz", hash = "sha256:5207555d05d9107e49b8eebb15a9e874b3b20d3ebfef2f60ba7cbb054982826a"},
 ]
 
 [package.dependencies]
 aiohttp = ">=3.6.0,<4.0.0"
-arrow = ">=1.2.3,<2.0.0"
-PyYAML = ">=6.0,<7.0"
-wcpan-drive-core = ">=3.0.0,<4.0.0"
+wcpan-drive-core = ">=4.0.0,<5.0.0"
+
+[[package]]
+name = "wcpan-drive-sqlite"
+version = "1.0.0"
+description = "sqlite3 snapshot service for wcpan.drive"
+optional = false
+python-versions = ">=3.12,<4.0"
+files = [
+    {file = "wcpan_drive_sqlite-1.0.0-py3-none-any.whl", hash = "sha256:85aae99e599e9861d90bbc782da791d8682cfc82ce4e01b63035d599e21fcd97"},
+    {file = "wcpan_drive_sqlite-1.0.0.tar.gz", hash = "sha256:c6a4a383ac93ad2c139ea9838d1a7c2b822810c5c094f0d51cd3c2e9c4a036cb"},
+]
+
+[package.dependencies]
+aiosqlite = ">=0.19.0,<0.20.0"
+wcpan-drive-core = ">=4.0.0,<5.0.0"
 
 [[package]]
 name = "wcpan-logging"
@@ -905,13 +874,13 @@ files = [
 
 [[package]]
 name = "wcpan-queue"
-version = "7.1.0"
+version = "7.2.0"
 description = "An utility for asyncio.Queue."
 optional = false
-python-versions = ">=3.11,<4.0"
+python-versions = ">=3.12,<4.0"
 files = [
-    {file = "wcpan_queue-7.1.0-py3-none-any.whl", hash = "sha256:75931725e078ca5d1edb0e5b37fef612f429dc3e01459847086a02f7b3adb481"},
-    {file = "wcpan_queue-7.1.0.tar.gz", hash = "sha256:ab0295b165fbfef35770bbc143026e87f3782f97fd5be252e0c402cf6a8eb4ad"},
+    {file = "wcpan_queue-7.2.0-py3-none-any.whl", hash = "sha256:f620902d5ffd979b3e638a7cc6f79907b75c20088011b3e014a562765880414d"},
+    {file = "wcpan_queue-7.2.0.tar.gz", hash = "sha256:5c374f2c34b56325b0a49ce66f04c6dd39f2d825683b6d56386649f2a730019a"},
 ]
 
 [[package]]
@@ -1020,4 +989,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "6c2d724d1bc2a7392d708592c8971e1af9cba2cade424525cc189fde7cb4957a"
+content-hash = "36d926c3a6021ebe6026b6f49142e0249c8a6d16f922ef15f45b0d5ec37527c3"
