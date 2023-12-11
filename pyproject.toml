@@ -18,7 +18,7 @@ wcpan-drive-crypt = "^4.0.0"
 transmission-rpc = "^4.1.2"
 wcpan-logging = "^2.0.2"
 dacite = "^1.8.0"
-wcpan-drive-sqlite = "^1.0.0"
+wcpan-drive-sqlite = "^1.0.1"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.11.0"
