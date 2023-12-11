@@ -1,12 +1,14 @@
-# daemon listening port
+# REQUIRED daemon listening port
 port: 1234
+# REQUIRED the upload directory on remote drive
+upload_to: /tmp
+# REQUIRED the drive config
+drive_config_path: /path/to/drive/config.yaml
 # wont upload these files
 exclude_pattern:
   - ^.*padding_file.*BitComet.*$
 # dynamic exclude pattern
 exclude_url: http://dfd/api/v1/filters
-# the upload directory on remote drive
-upload_to: /tmp
 # daemon log file path
 log_path: /tmp/duld.log
 # transmission RPC settings
