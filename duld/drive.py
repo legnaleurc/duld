@@ -1,17 +1,16 @@
 import asyncio
 from logging import getLogger
 import re
-from concurrent.futures import ProcessPoolExecutor
-from contextlib import AsyncExitStack, contextmanager
+from concurrent.futures import ProcessPoolExecutor, Executor
+from contextlib import AsyncExitStack, contextmanager, asynccontextmanager
 from pathlib import Path, PurePath
 from typing import TypeVar
 
-import aiohttp
-from wcpan.drive.cli.util import get_media_info
-from wcpan.drive.core.abc import Hasher
-from wcpan.drive.core.drive import DriveFactory, upload_from_local
-from wcpan.drive.core.exceptions import CacheError
-from wcpan.drive.core.types import Node
+from aiohttp import ClientSession
+from wcpan.drive.cli.lib import get_media_info, create_drive_from_config
+from wcpan.drive.core.types import Node, Drive, CreateHasher
+from wcpan.drive.core.lib import upload_file_from_local
+from wcpan.drive.core.exceptions import NodeNotFoundError
 
 
 RETRY_TIMES = 3
@@ -21,34 +20,25 @@ class UploadError(Exception):
     pass
 
 
+@asynccontextmanager
+async def create_uploader(*, drive_config_path: str, exclude_pattern: list[str] | None, exclude_url: str | None):
+    async with AsyncExitStack() as stack:
+        pool = stack.enter_context(ProcessPoolExecutor())
+        path = Path(drive_config_path)
+        drive = await stack.enter_async_context(create_drive_from_config(path))
+        curl = await stack.enter_async_context(ClientSession())
+        yield DriveUploader(pool=pool, drive=drive, curl=curl, exclude_pattern=exclude_pattern, exclude_url=exclude_url)
+
+
 class DriveUploader:
-    def __init__(self, exclude_pattern: list[str] | None, exclude_url: str | None):
+    def __init__(self, *, pool: Executor, drive: Drive, curl: ClientSession, exclude_pattern: list[str] | None, exclude_url: str | None):
+        self._pool = pool
+        self._curl = curl
+        self._drive = drive
         self._exclude_pattern = [] if not exclude_pattern else exclude_pattern
         self._exclude_url = exclude_url
-        self._jobs = set()
+        self._jobs = set[Path | int]()
         self._sync_lock = asyncio.Lock()
-        self._drive = None
-        self._curl = None
-        self._pool = None
-        self._raii = None
-
-    async def __aenter__(self):
-        async with AsyncExitStack() as stack:
-            factory = DriveFactory()
-            factory.load_config()
-            self._pool = stack.enter_context(ProcessPoolExecutor())
-            self._drive = await stack.enter_async_context(factory(pool=self._pool))
-            self._curl = await stack.enter_async_context(aiohttp.ClientSession())
-            self._raii = stack.pop_all()
-        return self
-
-    async def __aexit__(self, type_, exc, tb):
-        assert self._raii
-        await self._raii.aclose()
-        self._drive = None
-        self._curl = None
-        self._pool = None
-        self._raii = None
 
     async def upload_from_path(self, remote_path: PurePath, local_path: Path) -> None:
         assert self._drive
@@ -96,7 +86,7 @@ class DriveUploader:
         async with self._sync_lock:
             await asyncio.sleep(1)
             count = 0
-            async for changes in self._drive.sync():
+            async for _ in self._drive.sync():
                 count += 1
             getLogger(__name__).info(f"sync {count}")
 
@@ -117,23 +107,23 @@ class DriveUploader:
     async def _upload_directory(self, node: Node, local_path: Path) -> None:
         assert self._drive
 
-        if node.trashed:
+        if node.is_trashed:
             raise UploadError(f"{node.name} should not be trashed")
 
         dir_name = local_path.name
 
         # find or create remote directory
-        child_node = await self._drive.get_node_by_name_from_parent(dir_name, node)
+        child_node = await self._drive.get_child_by_name(dir_name, node)
 
         if not child_node:
             # create if not exists
-            child_node = await self._drive.create_folder(node, dir_name)
+            child_node = await self._drive.create_directory(dir_name, node)
 
-        if child_node.trashed:
+        if child_node.is_trashed:
             raise UploadError(f"{child_node.name} should not be trashed")
 
-        if child_node.is_file:
-            # should not be a file
+        if not child_node.is_directory:
+            # should be a directory
             raise UploadError(f"{child_node.name} should be a folder")
 
         # Need to update local cache for the added folder.
@@ -157,49 +147,49 @@ class DriveUploader:
         assert self._drive
 
         file_name = local_path.name
-        remote_path = await self._drive.get_path(node)
+        remote_path = await self._drive.resolve_path(node)
         if not remote_path:
             raise UploadError(f"{node.name} not found")
         remote_path = remote_path / file_name
 
-        child_node = await self._drive.get_node_by_name_from_parent(file_name, node)
+        child_node = await self._drive.get_child_by_name(file_name, node)
 
         if child_node:
-            if child_node.trashed:
+            if child_node.is_trashed:
                 raise UploadError(f"{remote_path} already exists but it is in trash")
 
-            if child_node.is_folder:
+            if child_node.is_directory:
                 raise UploadError(f"{remote_path} already exists but it is a folder")
 
-            if not child_node.hash_:
+            if not child_node.hash:
                 raise UploadError(f"{remote_path} has invalid hash")
 
             # check integrity
-            await self._verify_remote_file(local_path, remote_path, child_node.hash_)
+            await self._verify_remote_file(local_path, remote_path, child_node.hash)
             getLogger(__name__).info(
                 f"{remote_path} already exists and is the same file"
             )
             return
 
         media_info = await get_media_info(local_path)
-        child_node = await upload_from_local(
+        child_node = await upload_file_from_local(
             self._drive,
-            node,
             local_path,
-            media_info,
+            node,
+            media_info=media_info,
         )
 
         if not child_node:
             raise UploadError(f"{remote_path} upload failed")
 
-        if not child_node.hash_:
+        if not child_node.hash:
             raise UploadError(f"{remote_path} has invalid hash")
 
         # check integrity
         await self._verify_remote_file(
             local_path,
             remote_path,
-            child_node.hash_,
+            child_node.hash,
         )
         getLogger(__name__).info(f"finished {remote_path}")
 
@@ -211,11 +201,11 @@ class DriveUploader:
     ) -> None:
         assert self._drive
         loop = asyncio.get_running_loop()
-        hasher = await self._drive.get_hasher()
+        factory = await self._drive.get_hasher_factory()
         local_hash = await loop.run_in_executor(
             self._pool,
             md5sum,
-            hasher,
+            factory,
             local_path,
         )
         if local_hash != remote_hash:
@@ -227,11 +217,11 @@ class DriveUploader:
     async def _try_resolve_name_confliction(self, node: Node, local_path: Path):
         assert self._drive
         name = local_path.name
-        child = await self._drive.get_node_by_name_from_parent(name, node)
+        child = await self._drive.get_child_by_name(name, node)
         if not child:
             return True
         try:
-            await self._drive.trash_node_by_id(node.id_)
+            await self._drive.move(node, trashed=True)
             return True
         except Exception:
             getLogger(__name__).exception(f"failed to resolve name confliction")
@@ -255,23 +245,28 @@ class DriveUploader:
         assert self._drive
         while True:
             try:
-                await self._drive.get_path(node)
+                await self._drive.resolve_path(node)
                 break
-            except CacheError:
+            except NodeNotFoundError:
                 getLogger(__name__).info(f"not in cache")
             except Exception:
                 getLogger(__name__).exception(f"error on updating local cache")
             await self._sync()
 
 
-def md5sum(hasher: Hasher, path: Path):
-    with path.open("rb") as fin:
-        while True:
-            chunk = fin.read(65536)
-            if not chunk:
-                break
-            hasher.update(chunk)
-    return hasher.hexdigest()
+def md5sum(factory: CreateHasher, path: Path) -> str:
+    from asyncio import run
+
+    async def calc():
+        hasher = await factory()
+        with path.open("rb") as fin:
+            while True:
+                chunk = fin.read(65536)
+                if not chunk:
+                    break
+                await hasher.update(chunk)
+        return await hasher.hexdigest()
+    return run(calc())
 
 
 T = TypeVar("T")

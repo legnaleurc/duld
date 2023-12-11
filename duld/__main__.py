@@ -1,5 +1,4 @@
 import asyncio
-import argparse
 from logging import getLogger
 from logging.config import dictConfig
 from pathlib import Path, PurePath
@@ -8,12 +7,13 @@ import sys
 from collections.abc import Coroutine
 from contextlib import AsyncExitStack, asynccontextmanager
 from typing import TypeAlias
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 
 from aiohttp.web import Application, AppRunner, TCPSite
 from wcpan.logging import ConfigBuilder
 
 from .api import HaHHandler, TorrentsHandler
-from .drive import DriveUploader
+from .drive import create_uploader
 from .hah import watch_hah_log
 from .settings import load_from_path
 from .torrent import watch_disk_space
@@ -23,9 +23,9 @@ Runnable: TypeAlias = Coroutine[None, None, None]
 
 
 class Daemon(object):
-    def __init__(self, args):
-        args = parse_args(args)
-        self._cfg = load_from_path(args.settings)
+    def __init__(self, args: list[str]):
+        kwargs = parse_args(args)
+        self._cfg = load_from_path(kwargs.settings)
         dictConfig(
             ConfigBuilder(path=self._cfg.log_path, rotate=True)
             .add("duld", "__main__", level="D")
@@ -61,7 +61,8 @@ class Daemon(object):
             app["ctx"] = self._cfg
 
             uploader = await stack.enter_async_context(
-                DriveUploader(
+                create_uploader(
+                    drive_config_path=self._cfg.drive_config_path,
                     exclude_pattern=self._cfg.exclude_pattern,
                     exclude_url=self._cfg.exclude_url,
                 )
@@ -129,13 +130,13 @@ async def background(c: Runnable):
             task.cancel()
 
 
-def parse_args(args):
-    parser = argparse.ArgumentParser(
-        prog="duld", formatter_class=argparse.ArgumentDefaultsHelpFormatter
+def parse_args(args: list[str]):
+    parser = ArgumentParser(
+        prog="duld", formatter_class=ArgumentDefaultsHelpFormatter
     )
     parser.add_argument("-s", "--settings", type=str, help="settings file name")
-    args = parser.parse_args(args[1:])
-    return args
+    kwargs = parser.parse_args(args[1:])
+    return kwargs
 
 
 main = Daemon(sys.argv)

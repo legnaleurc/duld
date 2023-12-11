@@ -21,6 +21,7 @@ class TransmissionData:
 @dataclass
 class Data:
     port: int
+    drive_config_path: str
     upload_to: str
     log_path: str | None
     exclude_pattern: list[str] | None

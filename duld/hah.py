@@ -51,7 +51,7 @@ class _LogParser(object):
             self._buffer.pop(0)
             yield line
 
-    def _parse_line(self, line) -> Path | None:
+    def _parse_line(self, line: str) -> Path | None:
         m = re.match(
             r".*\[info\] GalleryDownloader: Finished download of gallery: (.+)\n", line
         )
