@@ -1,6 +1,8 @@
 import asyncio
 from logging import getLogger
 import re
+from asyncio import Lock
+from collections.abc import Awaitable
 from concurrent.futures import ProcessPoolExecutor, Executor
 from contextlib import AsyncExitStack, contextmanager, asynccontextmanager
 from pathlib import Path, PurePath
@@ -21,39 +23,52 @@ class UploadError(Exception):
 
 
 @asynccontextmanager
-async def create_uploader(*, drive_config_path: str, exclude_pattern: list[str] | None, exclude_url: str | None):
+async def create_uploader(
+    *,
+    drive_config_path: str,
+    exclude_pattern: list[str] | None,
+    exclude_url: str | None,
+):
     async with AsyncExitStack() as stack:
         pool = stack.enter_context(ProcessPoolExecutor())
         path = Path(drive_config_path)
         drive = await stack.enter_async_context(create_drive_from_config(path))
         curl = await stack.enter_async_context(ClientSession())
-        yield DriveUploader(pool=pool, drive=drive, curl=curl, exclude_pattern=exclude_pattern, exclude_url=exclude_url)
+        yield DriveUploader(
+            pool=pool,
+            drive=drive,
+            curl=curl,
+            exclude_pattern=exclude_pattern,
+            exclude_url=exclude_url,
+        )
 
 
 class DriveUploader:
-    def __init__(self, *, pool: Executor, drive: Drive, curl: ClientSession, exclude_pattern: list[str] | None, exclude_url: str | None):
+    def __init__(
+        self,
+        *,
+        pool: Executor,
+        drive: Drive,
+        curl: ClientSession,
+        exclude_pattern: list[str] | None,
+        exclude_url: str | None,
+    ):
         self._pool = pool
         self._curl = curl
         self._drive = drive
         self._exclude_pattern = [] if not exclude_pattern else exclude_pattern
         self._exclude_url = exclude_url
         self._jobs = set[Path | int]()
-        self._sync_lock = asyncio.Lock()
+        self._sync_lock = Lock()
 
     async def upload_from_path(self, remote_path: PurePath, local_path: Path) -> None:
-        assert self._drive
-
         if local_path in self._jobs:
             getLogger(__name__).warning(f"{local_path} is still uploading")
             return
 
         with job_guard(self._jobs, local_path):
             await self._sync()
-
             node = await self._drive.get_node_by_path(remote_path)
-            if not node:
-                raise UploadError(f"{remote_path} not found")
-
             await self._upload(node, local_path)
 
     async def upload_from_torrent(
@@ -63,8 +78,6 @@ class DriveUploader:
         torrent_root: str,
         root_items: list[str],
     ) -> None:
-        assert self._drive
-
         if torrent_id in self._jobs:
             getLogger(__name__).warning(f"{torrent_id} is still uploading")
             return
@@ -73,16 +86,13 @@ class DriveUploader:
             await self._sync()
 
             node = await self._drive.get_node_by_path(remote_path)
-            if not node:
-                raise UploadError(f"{remote_path} not found")
 
             # files/directories to be upload
-            items = map(lambda _: Path(torrent_root, _), root_items)
+            items = (Path(torrent_root, _) for _ in root_items)
             for item in items:
                 await self._upload(node, item)
 
     async def _sync(self):
-        assert self._drive
         async with self._sync_lock:
             await asyncio.sleep(1)
             count = 0
@@ -113,9 +123,9 @@ class DriveUploader:
         dir_name = local_path.name
 
         # find or create remote directory
-        child_node = await self._drive.get_child_by_name(dir_name, node)
-
-        if not child_node:
+        try:
+            child_node = await self._drive.get_child_by_name(dir_name, node)
+        except NodeNotFoundError:
             # create if not exists
             child_node = await self._drive.create_directory(dir_name, node)
 
@@ -144,15 +154,11 @@ class DriveUploader:
         raise UploadError(f"tried upload {RETRY_TIMES} times")
 
     async def _upload_file(self, node: Node, local_path: Path) -> None:
-        assert self._drive
-
         file_name = local_path.name
         remote_path = await self._drive.resolve_path(node)
-        if not remote_path:
-            raise UploadError(f"{node.name} not found")
         remote_path = remote_path / file_name
 
-        child_node = await self._drive.get_child_by_name(file_name, node)
+        child_node = await _else_none(self._drive.get_child_by_name(file_name, node))
 
         if child_node:
             if child_node.is_trashed:
@@ -199,7 +205,6 @@ class DriveUploader:
         remote_path: PurePath,
         remote_hash: str,
     ) -> None:
-        assert self._drive
         loop = asyncio.get_running_loop()
         factory = await self._drive.get_hasher_factory()
         local_hash = await loop.run_in_executor(
@@ -215,7 +220,6 @@ class DriveUploader:
 
     # used in exception handler, DO NOT throw another exception again
     async def _try_resolve_name_confliction(self, node: Node, local_path: Path):
-        assert self._drive
         name = local_path.name
         child = await self._drive.get_child_by_name(name, node)
         if not child:
@@ -242,7 +246,6 @@ class DriveUploader:
         return False
 
     async def _ensure_node_exists(self, node: Node) -> None:
-        assert self._drive
         while True:
             try:
                 await self._drive.resolve_path(node)
@@ -266,6 +269,7 @@ def md5sum(factory: CreateHasher, path: Path) -> str:
                     break
                 await hasher.update(chunk)
         return await hasher.hexdigest()
+
     return run(calc())
 
 
@@ -279,3 +283,10 @@ def job_guard(set_: set[T], token: T):
         yield
     finally:
         set_.discard(token)
+
+
+async def _else_none(aw: Awaitable[Node]) -> Node | None:
+    try:
+        return await aw
+    except NodeNotFoundError:
+        return None

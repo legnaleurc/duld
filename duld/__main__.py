@@ -131,9 +131,7 @@ async def background(c: Runnable):
 
 
 def parse_args(args: list[str]):
-    parser = ArgumentParser(
-        prog="duld", formatter_class=ArgumentDefaultsHelpFormatter
-    )
+    parser = ArgumentParser(prog="duld", formatter_class=ArgumentDefaultsHelpFormatter)
     parser.add_argument("-s", "--settings", type=str, help="settings file name")
     kwargs = parser.parse_args(args[1:])
     return kwargs
