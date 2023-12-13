@@ -789,31 +789,31 @@ zstd = ["zstandard (>=0.18.0)"]
 
 [[package]]
 name = "wcpan-drive-cli"
-version = "3.0.0"
+version = "3.1.4"
 description = "command line tool for wcpan.drive"
 optional = false
 python-versions = ">=3.12,<4.0"
 files = [
-    {file = "wcpan_drive_cli-3.0.0-py3-none-any.whl", hash = "sha256:87d500c1608565b83b9af3560678522598997cd1953361937cc093481cb42e37"},
-    {file = "wcpan_drive_cli-3.0.0.tar.gz", hash = "sha256:d445050f33b6ef7ebe2863ab66b5b0219424190197bcf85d4d83e24923d0133a"},
+    {file = "wcpan_drive_cli-3.1.4-py3-none-any.whl", hash = "sha256:51474e84b80578fc823ebe08853498d7caae14dd2ad58771a11e3a090de26dc5"},
+    {file = "wcpan_drive_cli-3.1.4.tar.gz", hash = "sha256:ba774d38ff7f94d6f2c46e221daf01d6756ffffaaa3b13ce6f62c7202f821be3"},
 ]
 
 [package.dependencies]
 Pillow = ">=9,<11"
 PyYAML = ">=6.0.1,<7.0.0"
-wcpan-drive-core = ">=4.0.0,<5.0.0"
+wcpan-drive-core = ">=4.0.1,<5.0.0"
 wcpan-logging = ">=2.0.3,<3.0.0"
-wcpan-queue = ">=7.2.0,<8.0.0"
+wcpan-queue = ">=7.2.1,<8.0.0"
 
 [[package]]
 name = "wcpan-drive-core"
-version = "4.0.0"
+version = "4.0.1"
 description = "asynchronous generic cloud drive library"
 optional = false
 python-versions = ">=3.12,<4.0"
 files = [
-    {file = "wcpan_drive_core-4.0.0-py3-none-any.whl", hash = "sha256:d9dd171de038426aef06745093c9955b8c991f55578d66b5d567afaf35e3ce02"},
-    {file = "wcpan_drive_core-4.0.0.tar.gz", hash = "sha256:fb7ce8590e3c923c3147c86518d1bd0b6faa08309a6169c8820c1720e0669fda"},
+    {file = "wcpan_drive_core-4.0.1-py3-none-any.whl", hash = "sha256:8b1b1143f92aabe22561af9045ee08b7f4c8377491856ba49bbd3acd521c8361"},
+    {file = "wcpan_drive_core-4.0.1.tar.gz", hash = "sha256:b8c70552f15e5e776ccdb73e287f5f3adf80020ad6416e3f2359a526d4fcb8ad"},
 ]
 
 [[package]]
@@ -874,13 +874,13 @@ files = [
 
 [[package]]
 name = "wcpan-queue"
-version = "7.2.0"
+version = "7.2.1"
 description = "An utility for asyncio.Queue."
 optional = false
 python-versions = ">=3.12,<4.0"
 files = [
-    {file = "wcpan_queue-7.2.0-py3-none-any.whl", hash = "sha256:f620902d5ffd979b3e638a7cc6f79907b75c20088011b3e014a562765880414d"},
-    {file = "wcpan_queue-7.2.0.tar.gz", hash = "sha256:5c374f2c34b56325b0a49ce66f04c6dd39f2d825683b6d56386649f2a730019a"},
+    {file = "wcpan_queue-7.2.1-py3-none-any.whl", hash = "sha256:1688ac9727ad943d88972cc5cc591918e344fd499893f7f81cb264fc6489eba9"},
+    {file = "wcpan_queue-7.2.1.tar.gz", hash = "sha256:c04e3bb3b9eb1ceb1d2b2df8ed5fa5ae53a7e47375c9d5eee9a27a2ea269ed46"},
 ]
 
 [[package]]
@@ -989,4 +989,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "9f93da6cf92640da402ac269266765d378268186cc047fff62cb99880bfb4d91"
+content-hash = "e758e9e37e84103f8e35e552d83b89b12e91980b228949f379d48b6af51064ed"
