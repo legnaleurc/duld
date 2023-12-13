@@ -6,7 +6,6 @@ from collections.abc import Awaitable
 from concurrent.futures import ProcessPoolExecutor, Executor
 from contextlib import AsyncExitStack, contextmanager, asynccontextmanager
 from pathlib import Path, PurePath
-from typing import TypeVar
 
 from aiohttp import ClientSession
 from wcpan.drive.cli.lib import get_media_info, create_drive_from_config
@@ -277,11 +276,8 @@ def md5sum(factory: CreateHasher, path: Path) -> str:
     return run(calc())
 
 
-T = TypeVar("T")
-
-
 @contextmanager
-def job_guard(set_: set[T], token: T):
+def job_guard[T](set_: set[T], token: T):
     set_.add(token)
     try:
         yield
