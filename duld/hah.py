@@ -143,11 +143,12 @@ async def _upload(uploader: DriveUploader, src_path: Path, dst_path: PurePath) -
     if not src_path.exists():
         getLogger(__name__).info(f"hah ignored deleted path {src_path}")
         return
-    getLogger(__name__).info(f"hah upload {src_path}")
     try:
         with TemporaryDirectory() as tmp:
             work_path = Path(tmp)
+            getLogger(__name__).info(f"compressing {src_path} to {work_path} ...")
             tmp_path = await _archive_hah_path(src_path, work_path)
+            getLogger(__name__).info(f"hah upload {src_path}")
             await uploader.upload_from_hah(dst_path, tmp_path)
     except Exception:
         getLogger(__name__).exception(
@@ -158,10 +159,10 @@ async def _upload(uploader: DriveUploader, src_path: Path, dst_path: PurePath) -
     shutil.rmtree(src_path, ignore_errors=True)
 
 
-async def _archive_hah_path(local_path: Path, work_path: Path) -> Path:
+async def _archive_hah_path(src_path: Path, work_path: Path) -> Path:
     from asyncio.subprocess import DEVNULL
 
-    name = f"{local_path.name}.7z"
+    name = f"{src_path.name}.7z"
     out_path = work_path / name
     cmd = [
         "7z",
@@ -171,11 +172,11 @@ async def _archive_hah_path(local_path: Path, work_path: Path) -> Path:
         "*",
     ]
     p = await asyncio.create_subprocess_exec(
-        *cmd, cwd=str(local_path), stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL
+        *cmd, cwd=str(src_path), stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL
     )
     rv = await p.wait()
     if rv != 0:
-        raise RuntimeError("compress error")
+        raise RuntimeError(f"compress error: {src_path}")
     if not out_path.is_file():
-        raise RuntimeError("compress error")
+        raise RuntimeError(f"compress error: {src_path}")
     return out_path
