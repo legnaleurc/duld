@@ -5,6 +5,7 @@ import os
 import re
 import shutil
 from pathlib import Path, PurePath
+from tempfile import TemporaryDirectory
 
 from asyncinotify import Inotify, Mask
 
@@ -144,7 +145,10 @@ async def _upload(uploader: DriveUploader, src_path: Path, dst_path: PurePath) -
         return
     getLogger(__name__).info(f"hah upload {src_path}")
     try:
-        await uploader.upload_from_path(dst_path, src_path)
+        with TemporaryDirectory() as tmp:
+            work_path = Path(tmp)
+            tmp_path = await _archive_hah_path(src_path, work_path)
+            await uploader.upload_from_hah(dst_path, tmp_path)
     except Exception:
         getLogger(__name__).exception(
             f"trying to upload {src_path} to {dst_path} but failed"
@@ -152,3 +156,26 @@ async def _upload(uploader: DriveUploader, src_path: Path, dst_path: PurePath) -
         return
     getLogger(__name__).debug(f"rm -rf {src_path}")
     shutil.rmtree(src_path, ignore_errors=True)
+
+
+async def _archive_hah_path(local_path: Path, work_path: Path) -> Path:
+    from asyncio.subprocess import DEVNULL
+
+    name = f"{local_path.name}.7z"
+    out_path = work_path / name
+    cmd = [
+        "7z",
+        "a",
+        "-y",
+        str(out_path),
+        "*",
+    ]
+    p = await asyncio.create_subprocess_exec(
+        *cmd, cwd=str(local_path), stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL
+    )
+    rv = await p.wait()
+    if rv != 0:
+        raise RuntimeError("compress error")
+    if not out_path.is_file():
+        raise RuntimeError("compress error")
+    return out_path

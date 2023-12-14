@@ -60,7 +60,7 @@ class DriveUploader:
         self._jobs = set[Path | int]()
         self._sync_lock = Lock()
 
-    async def upload_from_path(self, remote_path: PurePath, local_path: Path) -> None:
+    async def upload_from_hah(self, remote_path: PurePath, local_path: Path) -> None:
         if local_path in self._jobs:
             getLogger(__name__).warning(f"{local_path} is still uploading")
             return
@@ -261,8 +261,6 @@ class DriveUploader:
 
 
 def md5sum(factory: CreateHasher, path: Path) -> str:
-    from asyncio import run
-
     async def calc():
         hasher = await factory()
         with path.open("rb") as fin:
@@ -273,7 +271,7 @@ def md5sum(factory: CreateHasher, path: Path) -> str:
                 await hasher.update(chunk)
         return await hasher.hexdigest()
 
-    return run(calc())
+    return asyncio.run(calc())
 
 
 @contextmanager
