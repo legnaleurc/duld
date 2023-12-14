@@ -148,7 +148,7 @@ async def _upload(uploader: DriveUploader, src_path: Path, dst_path: PurePath) -
             work_path = Path(tmp)
             getLogger(__name__).info(f"compressing {src_path} to {work_path} ...")
             tmp_path = await _archive_hah_path(src_path, work_path)
-            getLogger(__name__).info(f"hah upload {src_path}")
+            getLogger(__name__).info(f"hah upload {tmp_path}")
             await uploader.upload_from_hah(dst_path, tmp_path)
     except Exception:
         getLogger(__name__).exception(
