@@ -3,13 +3,18 @@ from logging import getLogger
 import re
 from asyncio import Lock
 from collections.abc import Awaitable
-from concurrent.futures import ProcessPoolExecutor, Executor
+from concurrent.futures import Executor
 from contextlib import AsyncExitStack, contextmanager, asynccontextmanager
 from pathlib import Path, PurePath
 
 from aiohttp import ClientSession
-from wcpan.drive.cli.lib import get_media_info, create_drive_from_config
-from wcpan.drive.core.types import Node, Drive, CreateHasher
+from wcpan.drive.cli.lib import (
+    get_media_info,
+    create_drive_from_config,
+    get_file_hash,
+    create_executor,
+)
+from wcpan.drive.core.types import Node, Drive
 from wcpan.drive.core.lib import upload_file_from_local
 from wcpan.drive.core.exceptions import NodeNotFoundError
 
@@ -29,7 +34,7 @@ async def create_uploader(
     exclude_url: str | None,
 ):
     async with AsyncExitStack() as stack:
-        pool = stack.enter_context(ProcessPoolExecutor())
+        pool = stack.enter_context(create_executor())
         path = Path(drive_config_path)
         drive = await stack.enter_async_context(create_drive_from_config(path))
         curl = await stack.enter_async_context(ClientSession())
@@ -208,14 +213,7 @@ class DriveUploader:
         remote_path: PurePath,
         remote_hash: str,
     ) -> None:
-        loop = asyncio.get_running_loop()
-        factory = await self._drive.get_hasher_factory()
-        local_hash = await loop.run_in_executor(
-            self._pool,
-            md5sum,
-            factory,
-            local_path,
-        )
+        local_hash = await get_file_hash(local_path, drive=self._drive, pool=self._pool)
         if local_hash != remote_hash:
             raise UploadError(
                 f"(remote) {remote_path} has a different hash ({local_hash}, {remote_hash})"
@@ -258,20 +256,6 @@ class DriveUploader:
             except Exception:
                 getLogger(__name__).exception(f"error on updating local cache")
             await self._sync()
-
-
-def md5sum(factory: CreateHasher, path: Path) -> str:
-    async def calc():
-        hasher = await factory()
-        with path.open("rb") as fin:
-            while True:
-                chunk = fin.read(65536)
-                if not chunk:
-                    break
-                await hasher.update(chunk)
-        return await hasher.hexdigest()
-
-    return asyncio.run(calc())
 
 
 @contextmanager
