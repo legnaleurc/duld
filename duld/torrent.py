@@ -3,7 +3,7 @@ from logging import getLogger
 import os.path
 from pathlib import PurePath
 
-from transmission_rpc import Client, Torrent
+from transmission_rpc import Client, Torrent, TransmissionError
 
 from .drive import DriveUploader
 from .settings import DiskSpaceData, TransmissionData
@@ -109,7 +109,12 @@ async def watch_disk_space(
     halted = False
     while True:
         await asyncio.sleep(60)
-        halted = _check_disk_space(transmission, disk_space, halted)
+        try:
+            halted = _check_disk_space(transmission, disk_space, halted)
+        except TransmissionError as e:
+            getLogger(__name__).error(f"transmission error {e}. data: {transmission}")
+        except Exception:
+            getLogger(__name__).exception("cannot check disk space")
 
 
 def _check_disk_space(
