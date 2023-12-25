@@ -17,6 +17,7 @@ from .drive import create_uploader
 from .hah import watch_hah_log
 from .settings import load_from_path
 from .torrent import watch_disk_space
+from .keys import CONTEXT, UPLOADER
 
 
 Runnable: TypeAlias = Coroutine[None, None, None]
@@ -58,7 +59,7 @@ class Daemon(object):
             app.router.add_view(r"/api/v1/hah", HaHHandler)
 
         async with AsyncExitStack() as stack:
-            app["ctx"] = self._cfg
+            app[CONTEXT] = self._cfg
 
             uploader = await stack.enter_async_context(
                 create_uploader(
@@ -67,7 +68,7 @@ class Daemon(object):
                     exclude_url=self._cfg.exclude_url,
                 )
             )
-            app["uploader"] = uploader
+            app[UPLOADER] = uploader
 
             if self._cfg.hah_path:
                 await stack.enter_async_context(

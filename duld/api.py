@@ -5,20 +5,19 @@ from pathlib import Path, PurePath
 from aiohttp.web import View, Response
 from aiohttp.web_exceptions import HTTPBadRequest, HTTPInternalServerError
 
-from .drive import DriveUploader
 from .hah import upload_finished
-from .settings import Data
 from .torrent import get_completed, upload_by_id
+from .keys import CONTEXT, UPLOADER
 
 
 class TorrentsHandler(View):
     async def post(self):
-        ctx: Data = self.request.app["ctx"]
+        ctx = self.request.app[CONTEXT]
         if not ctx.transmission:
             raise HTTPInternalServerError
 
         torrents = get_completed(ctx.transmission)
-        uploader: DriveUploader = self.request.app["uploader"]
+        uploader = self.request.app[UPLOADER]
         for t in torrents:
             asyncio.create_task(
                 upload_by_id(
@@ -33,7 +32,7 @@ class TorrentsHandler(View):
         return Response(text=result, content_type="application/json")
 
     async def put(self):
-        ctx: Data = self.request.app["ctx"]
+        ctx = self.request.app[CONTEXT]
         if not ctx.transmission:
             raise HTTPInternalServerError
 
@@ -41,7 +40,7 @@ class TorrentsHandler(View):
         if not torrent_id:
             raise HTTPBadRequest
 
-        uploader: DriveUploader = self.request.app["uploader"]
+        uploader = self.request.app[UPLOADER]
         asyncio.create_task(
             upload_by_id(
                 uploader=uploader,
@@ -55,11 +54,11 @@ class TorrentsHandler(View):
 
 class HaHHandler(View):
     async def post(self):
-        ctx: Data = self.request.app["ctx"]
+        ctx = self.request.app[CONTEXT]
         if not ctx.hah_path:
             raise HTTPInternalServerError
 
-        uploader: DriveUploader = self.request.app["uploader"]
+        uploader = self.request.app[UPLOADER]
         folders = upload_finished(
             hah_path=Path(ctx.hah_path),
             uploader=uploader,
