@@ -6,8 +6,8 @@ import signal
 import sys
 from collections.abc import Coroutine
 from contextlib import AsyncExitStack, asynccontextmanager
-from typing import TypeAlias
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+from asyncio import TaskGroup
 
 from aiohttp.web import Application, AppRunner, TCPSite
 from wcpan.logging import ConfigBuilder
@@ -17,10 +17,10 @@ from .drive import create_uploader
 from .hah import watch_hah_log
 from .settings import load_from_path
 from .torrent import watch_disk_space
-from .keys import CONTEXT, UPLOADER
+from .keys import CONTEXT, UPLOADER, SCHEDULER
 
 
-Runnable: TypeAlias = Coroutine[None, None, None]
+type Runnable[T] = Coroutine[None, None, T]
 
 
 class Daemon(object):
@@ -61,6 +61,9 @@ class Daemon(object):
         async with AsyncExitStack() as stack:
             app[CONTEXT] = self._cfg
 
+            group = await stack.enter_async_context(TaskGroup())
+            app[SCHEDULER] = group
+
             uploader = await stack.enter_async_context(
                 create_uploader(
                     drive_config_path=self._cfg.drive_config_path,
@@ -73,21 +76,24 @@ class Daemon(object):
             if self._cfg.hah_path:
                 await stack.enter_async_context(
                     background(
+                        group,
                         watch_hah_log(
                             hah_path=Path(self._cfg.hah_path),
                             uploader=uploader,
                             upload_to=PurePath(self._cfg.upload_to),
-                        )
+                            group=group,
+                        ),
                     )
                 )
 
             if self._cfg.transmission and self._cfg.reserved_space_in_gb:
                 await stack.enter_async_context(
                     background(
+                        group,
                         watch_disk_space(
                             transmission=self._cfg.transmission,
                             disk_space=self._cfg.reserved_space_in_gb,
-                        )
+                        ),
                     )
                 )
 
@@ -122,13 +128,12 @@ async def server_context(app: Application, port: int):
 
 
 @asynccontextmanager
-async def background(c: Runnable):
-    async with asyncio.TaskGroup() as group:
-        task = group.create_task(c)
-        try:
-            yield
-        finally:
-            task.cancel()
+async def background[T](group: TaskGroup, c: Runnable[T]):
+    task = group.create_task(c)
+    try:
+        yield
+    finally:
+        task.cancel()
 
 
 def parse_args(args: list[str]):

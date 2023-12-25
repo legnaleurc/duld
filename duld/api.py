@@ -1,4 +1,3 @@
-import asyncio
 import json
 from pathlib import Path, PurePath
 
@@ -7,7 +6,7 @@ from aiohttp.web_exceptions import HTTPBadRequest, HTTPInternalServerError
 
 from .hah import upload_finished
 from .torrent import get_completed, upload_by_id
-from .keys import CONTEXT, UPLOADER
+from .keys import CONTEXT, UPLOADER, SCHEDULER
 
 
 class TorrentsHandler(View):
@@ -17,9 +16,10 @@ class TorrentsHandler(View):
             raise HTTPInternalServerError
 
         torrents = get_completed(ctx.transmission)
+        group = self.request.app[SCHEDULER]
         uploader = self.request.app[UPLOADER]
         for t in torrents:
-            asyncio.create_task(
+            group.create_task(
                 upload_by_id(
                     uploader=uploader,
                     upload_to=PurePath(ctx.upload_to),
@@ -40,8 +40,9 @@ class TorrentsHandler(View):
         if not torrent_id:
             raise HTTPBadRequest
 
+        group = self.request.app[SCHEDULER]
         uploader = self.request.app[UPLOADER]
-        asyncio.create_task(
+        group.create_task(
             upload_by_id(
                 uploader=uploader,
                 upload_to=PurePath(ctx.upload_to),
@@ -58,11 +59,13 @@ class HaHHandler(View):
         if not ctx.hah_path:
             raise HTTPInternalServerError
 
+        group = self.request.app[SCHEDULER]
         uploader = self.request.app[UPLOADER]
         folders = upload_finished(
             hah_path=Path(ctx.hah_path),
             uploader=uploader,
             upload_to=PurePath(ctx.upload_to),
+            group=group,
         )
         result = json.dumps(folders)
         result = result + "\n"

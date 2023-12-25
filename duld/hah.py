@@ -1,4 +1,3 @@
-import asyncio
 import glob
 from logging import getLogger
 import os
@@ -6,6 +5,7 @@ import re
 import shutil
 from pathlib import Path, PurePath
 from tempfile import TemporaryDirectory
+from asyncio import TaskGroup
 
 from asyncinotify import Inotify, Mask
 
@@ -77,6 +77,7 @@ async def watch_hah_log(
     hah_path: Path,
     uploader: DriveUploader,
     upload_to: PurePath,
+    group: TaskGroup,
 ):
     log_path = hah_path / "log"
     download_path = hah_path / "download"
@@ -87,13 +88,14 @@ async def watch_hah_log(
             async for _event in watcher:
                 path_list = parse()
                 for path in path_list:
-                    # TODO handle cancel
-                    asyncio.create_task(_upload(uploader, path, upload_to))
+                    group.create_task(_upload(uploader, path, upload_to))
         except Exception:
             getLogger(__name__).exception(f"failed to pull from inotify")
 
 
-def upload_finished(*, hah_path: Path, uploader: DriveUploader, upload_to: PurePath):
+def upload_finished(
+    *, hah_path: Path, uploader: DriveUploader, upload_to: PurePath, group: TaskGroup
+):
     lines = _get_existing_logs(hah_path)
     folders = (_parse_folder_name(_) for _ in lines)
     folder_table = {_[0]: _[1] for _ in folders if _}
@@ -104,7 +106,7 @@ def upload_finished(*, hah_path: Path, uploader: DriveUploader, upload_to: PureP
     for real_name in finished_list:
         real_path = hah_path / "download" / real_name
         # TODO handle cancel
-        asyncio.create_task(_upload(uploader, real_path, upload_to))
+        group.create_task(_upload(uploader, real_path, upload_to))
 
     return finished_list
 
@@ -160,6 +162,7 @@ async def _upload(uploader: DriveUploader, src_path: Path, dst_path: PurePath) -
 
 
 async def _archive_hah_path(src_path: Path, work_path: Path) -> Path:
+    from asyncio import create_subprocess_exec
     from asyncio.subprocess import DEVNULL
 
     name = f"{src_path.name}.7z"
@@ -171,7 +174,7 @@ async def _archive_hah_path(src_path: Path, work_path: Path) -> Path:
         str(out_path),
         "*",
     ]
-    p = await asyncio.create_subprocess_exec(
+    p = await create_subprocess_exec(
         *cmd, cwd=str(src_path), stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL
     )
     rv = await p.wait()
