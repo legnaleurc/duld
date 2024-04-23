@@ -1,0 +1,9 @@
+Dockerfile
+compose.yaml
+.env
+.env.*
+
+.venv
+.python-version
+**/__pycache__
+.vscode
