@@ -1,5 +1,5 @@
 import asyncio
-from logging import getLogger
+import logging
 import os.path
 from pathlib import PurePath
 
@@ -7,6 +7,9 @@ from transmission_rpc import Client, Torrent, TransmissionError
 
 from .drive import DriveUploader
 from .settings import DiskSpaceData, TransmissionData
+
+
+_L = logging.getLogger(__name__)
 
 
 async def upload_by_id(
@@ -19,18 +22,18 @@ async def upload_by_id(
     torrent_client = _connect_transmission(transmission)
     torrent = torrent_client.get_torrent(torrent_id)
     if not torrent:
-        getLogger(__name__).warning(f"no such torrent id {torrent_id}")
+        _L.warning(f"no such torrent id {torrent_id}")
         return
 
     root_items = _get_root_items(torrent)
     if not root_items:
-        getLogger(__name__).warning(f"{torrent.name}: no item to upload?")
+        _L.warning(f"{torrent.name}: no item to upload?")
         return
-    getLogger(__name__).debug(f"{torrent.name}: {root_items}")
+    _L.debug(f"{torrent.name}: {root_items}")
 
     torrent_root = torrent.download_dir
     if not torrent_root:
-        getLogger(__name__).error(f"{torrent.name}: invalid location")
+        _L.error(f"{torrent.name}: invalid location")
         return
 
     # upload files to Cloud Drive
@@ -39,8 +42,8 @@ async def upload_by_id(
             upload_to, torrent_id, torrent_root, root_items
         )
     except Exception:
-        getLogger(__name__).exception("upload failed")
-        getLogger(__name__).error(f"retry url: /api/v1/torrents/{torrent_id}")
+        _L.exception("upload failed")
+        _L.error(f"retry url: /api/v1/torrents/{torrent_id}")
         return
 
     # remove the task from Transmission first
@@ -70,7 +73,7 @@ def _get_root_items(torrent: Torrent) -> list[str]:
 
 def _remove_torrent(client: Client, torrent: Torrent) -> None:
     client.remove_torrent(torrent.id, delete_data=True)
-    getLogger(__name__).info(f"{torrent.name}: remove torrent")
+    _L.info(f"{torrent.name}: remove torrent")
 
 
 def _split_all(path: str) -> list[str]:
@@ -112,9 +115,9 @@ async def watch_disk_space(
         try:
             halted = _check_disk_space(transmission, disk_space, halted)
         except TransmissionError as e:
-            getLogger(__name__).error(f"transmission error {e}. data: {transmission}")
+            _L.error(f"transmission error {e}. data: {transmission}")
         except Exception:
-            getLogger(__name__).exception("cannot check disk space")
+            _L.exception("cannot check disk space")
 
 
 def _check_disk_space(
@@ -128,19 +131,19 @@ def _check_disk_space(
     download_dir = torrent_session.download_dir
     free_space = torrent_client.free_space(download_dir)
     if free_space is None:
-        getLogger(__name__).warning("cannot get free space")
+        _L.warning("cannot get free space")
         return halted
     free_space_in_gb = free_space / 1024 / 1024 / 1024
 
     if free_space_in_gb >= disk_space.safe:
         if halted:
-            getLogger(__name__).info(f"resuming halted torrents: {free_space_in_gb}")
+            _L.info(f"resuming halted torrents: {free_space_in_gb}")
             _resume_halted_torrents(torrent_client)
         return False
 
     if free_space_in_gb <= disk_space.danger:
         if not halted:
-            getLogger(__name__).info(f"halting queued torrents: {free_space_in_gb}")
+            _L.info(f"halting queued torrents: {free_space_in_gb}")
             _halt_pending_torrents(torrent_client)
         return True
 

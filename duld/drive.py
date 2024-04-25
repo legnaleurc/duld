@@ -1,5 +1,5 @@
 import asyncio
-from logging import getLogger
+import logging
 import re
 from asyncio import Lock
 from collections.abc import Awaitable
@@ -20,6 +20,7 @@ from wcpan.drive.core.exceptions import NodeNotFoundError
 
 
 RETRY_TIMES = 3
+_L = logging.getLogger(__name__)
 
 
 class UploadError(Exception):
@@ -67,7 +68,7 @@ class DriveUploader:
 
     async def upload_from_hah(self, remote_path: PurePath, local_path: Path) -> None:
         if local_path in self._jobs:
-            getLogger(__name__).warning(f"{local_path} is still uploading")
+            _L.warning(f"{local_path} is still uploading")
             return
 
         with job_guard(self._jobs, local_path):
@@ -83,7 +84,7 @@ class DriveUploader:
         root_items: list[str],
     ) -> None:
         if torrent_id in self._jobs:
-            getLogger(__name__).warning(f"{torrent_id} is still uploading")
+            _L.warning(f"{torrent_id} is still uploading")
             return
 
         with job_guard(self._jobs, torrent_id):
@@ -102,15 +103,15 @@ class DriveUploader:
             count = 0
             async for _ in self._drive.sync():
                 count += 1
-            getLogger(__name__).info(f"sync {count}")
+            _L.info(f"sync {count}")
 
     async def _upload(self, node: Node, local_path: Path) -> None:
         if await self._should_exclude(local_path.name):
-            getLogger(__name__).info(f"excluded {local_path}")
+            _L.info(f"excluded {local_path}")
             return
 
         if not local_path.exists():
-            getLogger(__name__).warning(f"cannot upload non-exist path {local_path}")
+            _L.warning(f"cannot upload non-exist path {local_path}")
             return
 
         if local_path.is_dir():
@@ -153,7 +154,7 @@ class DriveUploader:
                 await self._upload_file(node, local_path)
                 return
             except Exception:
-                getLogger(__name__).exception("retry upload file")
+                _L.exception("retry upload file")
             await self._sync()
         raise UploadError(f"tried upload {RETRY_TIMES} times")
 
@@ -178,9 +179,7 @@ class DriveUploader:
 
             # check integrity
             await self._verify_remote_file(local_path, remote_path, child_node.hash)
-            getLogger(__name__).info(
-                f"{remote_path} already exists and is the same file"
-            )
+            _L.info(f"{remote_path} already exists and is the same file")
             return
 
         type_, _ext = guess_type(local_path)
@@ -205,7 +204,7 @@ class DriveUploader:
             remote_path,
             child_node.hash,
         )
-        getLogger(__name__).info(f"finished {remote_path}")
+        _L.info(f"finished {remote_path}")
 
     async def _verify_remote_file(
         self,
@@ -229,7 +228,7 @@ class DriveUploader:
             await self._drive.move(node, trashed=True)
             return True
         except Exception:
-            getLogger(__name__).exception(f"failed to resolve name confliction")
+            _L.exception(f"failed to resolve name confliction")
         return False
 
     async def _should_exclude(self, name: str):
@@ -252,9 +251,9 @@ class DriveUploader:
                 await self._drive.resolve_path(node)
                 break
             except NodeNotFoundError:
-                getLogger(__name__).info(f"not in cache")
+                _L.info(f"not in cache")
             except Exception:
-                getLogger(__name__).exception(f"error on updating local cache")
+                _L.exception(f"error on updating local cache")
             await self._sync()
 
 

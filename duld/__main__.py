@@ -1,6 +1,5 @@
 import asyncio
-from logging import getLogger
-from logging.config import dictConfig
+import logging
 from pathlib import Path, PurePath
 import signal
 import sys
@@ -23,8 +22,13 @@ from .keys import CONTEXT, UPLOADER, SCHEDULER
 type Runnable[T] = Coroutine[None, None, T]
 
 
+_L = logging.getLogger(__name__)
+
+
 class Daemon(object):
     def __init__(self, args: list[str]):
+        from logging.config import dictConfig
+
         kwargs = parse_args(args)
         self._cfg = load_from_path(kwargs.settings)
         dictConfig(
@@ -46,7 +50,7 @@ class Daemon(object):
         try:
             return await self._main()
         except Exception:
-            getLogger(__name__).exception("main function error")
+            _L.exception("main function error")
         return 1
 
     async def _main(self):
@@ -99,7 +103,7 @@ class Daemon(object):
 
             await stack.enter_async_context(server_context(app, self._cfg.port))
 
-            getLogger(__name__).info("server started")
+            _L.info("server started")
             await self._wait_for_finished()
 
         return 0

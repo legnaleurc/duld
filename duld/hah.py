@@ -1,5 +1,5 @@
 import glob
-from logging import getLogger
+import logging
 import os
 import re
 import shutil
@@ -10,6 +10,9 @@ from asyncio import TaskGroup
 from asyncinotify import Inotify, Mask
 
 from .drive import DriveUploader
+
+
+_L = logging.getLogger(__name__)
 
 
 class _LogParser(object):
@@ -67,7 +70,7 @@ class _LogParser(object):
         paths = self._download_path.glob(m)
         paths = list(paths)
         if len(paths) != 1:
-            getLogger(__name__).error(f"(hah) {name} has multiple target {paths}")
+            _L.error(f"(hah) {name} has multiple target {paths}")
             return
         return paths[0]
 
@@ -90,7 +93,7 @@ async def watch_hah_log(
                 for path in path_list:
                     group.create_task(_upload(uploader, path, upload_to))
         except Exception:
-            getLogger(__name__).exception(f"failed to pull from inotify")
+            _L.exception(f"failed to pull from inotify")
 
 
 def upload_finished(
@@ -143,21 +146,19 @@ def _parse_name(line: str) -> str | None:
 
 async def _upload(uploader: DriveUploader, src_path: Path, dst_path: PurePath) -> None:
     if not src_path.exists():
-        getLogger(__name__).info(f"hah ignored deleted path {src_path}")
+        _L.info(f"hah ignored deleted path {src_path}")
         return
     try:
         with TemporaryDirectory() as tmp:
             work_path = Path(tmp)
-            getLogger(__name__).info(f"compressing {src_path} to {work_path} ...")
+            _L.info(f"compressing {src_path} to {work_path} ...")
             tmp_path = await _archive_hah_path(src_path, work_path)
-            getLogger(__name__).info(f"hah upload {tmp_path}")
+            _L.info(f"hah upload {tmp_path}")
             await uploader.upload_from_hah(dst_path, tmp_path)
     except Exception:
-        getLogger(__name__).exception(
-            f"trying to upload {src_path} to {dst_path} but failed"
-        )
+        _L.exception(f"trying to upload {src_path} to {dst_path} but failed")
         return
-    getLogger(__name__).debug(f"rm -rf {src_path}")
+    _L.debug(f"rm -rf {src_path}")
     shutil.rmtree(src_path, ignore_errors=True)
 
 
