@@ -168,7 +168,7 @@ async def _archive_hah_path(src_path: Path, work_path: Path) -> Path:
     name = f"{src_path.name}.7z"
     out_path = work_path / name
     cmd = [
-        "7z",
+        "7zr",
         "a",
         "-y",
         str(out_path),
