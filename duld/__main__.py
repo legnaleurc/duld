@@ -101,7 +101,9 @@ class Daemon(object):
                     )
                 )
 
-            await stack.enter_async_context(server_context(app, self._cfg.port))
+            await stack.enter_async_context(
+                server_context(app, self._cfg.host, self._cfg.port)
+            )
 
             _L.info("server started")
             await self._wait_for_finished()
@@ -118,13 +120,11 @@ class Daemon(object):
 
 
 @asynccontextmanager
-async def server_context(app: Application, port: int):
+async def server_context(app: Application, host: str, port: int):
     runner = AppRunner(app)
     await runner.setup()
     try:
-        site = TCPSite(runner, host="127.1", port=port)
-        await site.start()
-        site = TCPSite(runner, host="::1", port=port)
+        site = TCPSite(runner, host=host, port=port)
         await site.start()
         yield
     finally:

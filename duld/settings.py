@@ -20,6 +20,7 @@ class TransmissionData:
 
 @dataclass
 class Data:
+    host: str
     port: int
     drive_config_path: str
     upload_to: str

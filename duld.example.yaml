@@ -1,3 +1,5 @@
+# REQUIRED daemon listening host
+host: 127.0.0.1
 # REQUIRED daemon listening port
 port: 1234
 # REQUIRED the upload directory on remote drive
