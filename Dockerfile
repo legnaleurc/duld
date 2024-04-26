@@ -31,7 +31,7 @@ FROM base AS production
 RUN : \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-        p7zip \
+        p7zip ffmpeg \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
