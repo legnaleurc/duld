@@ -1,10 +1,10 @@
-# REQUIRED daemon listening host
+# daemon listening host
 host: 127.0.0.1
-# REQUIRED daemon listening port
+# daemon listening port
 port: 1234
-# REQUIRED the upload directory on remote drive
+# the upload directory on remote drive
 upload_to: /tmp
-# REQUIRED the drive config
+# the drive config
 drive_config_path: /path/to/drive/config.yaml
 # (optional) wont upload these files
 exclude_pattern:
@@ -22,6 +22,9 @@ transmission:
   # (optional)
   password:
   # (optional) explicit downloaded dir
+  # If omitted, torrent download_dir will be used.
+  # Set this value if the download_dir of the torrent
+  # is not visible to the daemon.
   download_dir:
 # (optional) HaH path
 hah_path: /path/to/hah
