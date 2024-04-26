@@ -31,7 +31,7 @@ async def upload_by_id(
         return
     _L.debug(f"{torrent.name}: {root_items}")
 
-    torrent_root = torrent.download_dir
+    torrent_root = _get_root_dir(torrent, transmission.download_dir)
     if not torrent_root:
         _L.error(f"{torrent.name}: invalid location")
         return
@@ -69,6 +69,12 @@ def _get_root_items(torrent: Torrent) -> list[str]:
         common.add(parts[0])
 
     return list(common)
+
+
+def _get_root_dir(torrent: Torrent, download_dir: str | None) -> str | None:
+    if download_dir:
+        return download_dir
+    return torrent.download_dir
 
 
 def _remove_torrent(client: Client, torrent: Torrent) -> None:

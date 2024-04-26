@@ -16,6 +16,7 @@ class TransmissionData:
     port: int
     username: str | None
     password: str | None
+    download_dir: str | None
 
 
 @dataclass

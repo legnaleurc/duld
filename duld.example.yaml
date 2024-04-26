@@ -6,20 +6,26 @@ port: 1234
 upload_to: /tmp
 # REQUIRED the drive config
 drive_config_path: /path/to/drive/config.yaml
-# wont upload these files
+# (optional) wont upload these files
 exclude_pattern:
   - ^.*padding_file.*BitComet.*$
-# dynamic exclude pattern
+# (optional) dynamic exclude pattern
 exclude_url: http://dfd/api/v1/filters
 # daemon log file path
 log_path: /tmp/duld.log
-# transmission RPC settings
+# (optional) transmission RPC settings
 transmission:
   host: localhost
   port: 9091
+  # (optional)
   username:
+  # (optional)
   password:
+  # (optional) explicit downloaded dir
+  download_dir:
+# (optional) HaH path
 hah_path: /path/to/hah
+# (optional) reserved disk space for torrents
 reserved_space_in_gb:
   safe: 8
   danger: 4
