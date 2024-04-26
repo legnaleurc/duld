@@ -25,6 +25,16 @@ Look `duld.example.yaml` and create your own configuration.
 python3 -m duld --settings=duld.yaml
 ```
 
+## Use Docker Compose
+
+```shell
+# prepare .env first
+cp .env.example .env
+
+docker compose build
+docker compose up
+```
+
 ## RESTful API
 
 ### POST /torrents
