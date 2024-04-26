@@ -71,10 +71,12 @@ class DriveUploader:
             _L.warning(f"{local_path} is still uploading")
             return
 
+        exclude_pattern = await self._fetch_filters()
+
         with job_guard(self._jobs, local_path):
             await self._sync()
             node = await self._drive.get_node_by_path(remote_path)
-            await self._upload(node, local_path)
+            await self._upload(node, local_path, exclude_pattern=exclude_pattern)
 
     async def upload_from_torrent(
         self,
@@ -87,6 +89,8 @@ class DriveUploader:
             _L.warning(f"{torrent_id} is still uploading")
             return
 
+        exclude_pattern = await self._fetch_filters()
+
         with job_guard(self._jobs, torrent_id):
             await self._sync()
 
@@ -95,7 +99,7 @@ class DriveUploader:
             # files/directories to be upload
             items = (Path(torrent_root, _) for _ in root_items)
             for item in items:
-                await self._upload(node, item)
+                await self._upload(node, item, exclude_pattern=exclude_pattern)
 
     async def _sync(self):
         async with self._sync_lock:
@@ -105,8 +109,10 @@ class DriveUploader:
                 count += 1
             _L.info(f"sync {count}")
 
-    async def _upload(self, node: Node, local_path: Path) -> None:
-        if await self._should_exclude(local_path.name):
+    async def _upload(
+        self, node: Node, local_path: Path, *, exclude_pattern: list[re.Pattern[str]]
+    ) -> None:
+        if _should_exclude(local_path.name, exclude_pattern):
             _L.info(f"excluded {local_path}")
             return
 
@@ -115,11 +121,15 @@ class DriveUploader:
             return
 
         if local_path.is_dir():
-            await self._upload_directory(node, local_path)
+            await self._upload_directory(
+                node, local_path, exclude_pattern=exclude_pattern
+            )
         else:
             await self._upload_file_retry(node, local_path)
 
-    async def _upload_directory(self, node: Node, local_path: Path) -> None:
+    async def _upload_directory(
+        self, node: Node, local_path: Path, *, exclude_pattern: list[re.Pattern[str]]
+    ) -> None:
         assert self._drive
 
         if node.is_trashed:
@@ -146,7 +156,7 @@ class DriveUploader:
         await self._ensure_node_exists(child_node)
 
         for child_path in local_path.iterdir():
-            await self._upload(child_node, child_path)
+            await self._upload(child_node, child_path, exclude_pattern=exclude_pattern)
 
     async def _upload_file_retry(self, node: Node, local_path: Path) -> None:
         for _ in range(RETRY_TIMES):
@@ -231,19 +241,15 @@ class DriveUploader:
             _L.exception(f"failed to resolve name confliction")
         return False
 
-    async def _should_exclude(self, name: str):
-        for pattern in self._exclude_pattern:
-            if re.match(pattern, name, re.IGNORECASE):
-                return True
+    async def _fetch_filters(self):
+        exclude_list = self._exclude_pattern
 
-        if self._exclude_url and self._curl:
+        if self._exclude_url:
             async with self._curl.get(self._exclude_url) as res:
                 rv: dict[str, str] = await res.json()
-                for _, pattern in rv.items():
-                    if re.match(pattern, name, re.IGNORECASE):
-                        return True
+                exclude_list = exclude_list + [_ for _ in rv.values()]
 
-        return False
+        return _to_regex_list(exclude_list)
 
     async def _ensure_node_exists(self, node: Node) -> None:
         while True:
@@ -270,4 +276,21 @@ async def _else_none(aw: Awaitable[Node]) -> Node | None:
     try:
         return await aw
     except NodeNotFoundError:
+        return None
+
+
+def _should_exclude(name: str, exclude_list: list[re.Pattern[str]]) -> bool:
+    return any(_.match(name) is not None for _ in exclude_list)
+
+
+def _to_regex_list(pattern_list: list[str]) -> list[re.Pattern[str]]:
+    non_empty = (_ for _ in pattern_list if _)
+    maybe_regex = (_to_pattern(_) for _ in non_empty)
+    return [_ for _ in maybe_regex if _]
+
+
+def _to_pattern(pattern: str) -> re.Pattern[str] | None:
+    try:
+        return re.compile(pattern, re.I)
+    except Exception:
         return None
