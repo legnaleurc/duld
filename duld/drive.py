@@ -6,6 +6,7 @@ from collections.abc import Awaitable
 from concurrent.futures import Executor
 from contextlib import AsyncExitStack, contextmanager, asynccontextmanager
 from pathlib import Path, PurePath
+from typing import TypedDict
 
 from aiohttp import ClientSession
 from wcpan.drive.cli.lib import (
@@ -21,6 +22,11 @@ from wcpan.drive.core.exceptions import NodeNotFoundError
 
 RETRY_TIMES = 3
 _L = logging.getLogger(__name__)
+
+
+class FilterResponse(TypedDict):
+    id: int
+    regexp: str
 
 
 class UploadError(Exception):
@@ -241,13 +247,13 @@ class DriveUploader:
             _L.exception(f"failed to resolve name confliction")
         return False
 
-    async def _fetch_filters(self):
+    async def _fetch_filters(self) -> list[re.Pattern[str]]:
         exclude_list = self._exclude_pattern
 
         if self._exclude_url:
             async with self._curl.get(self._exclude_url) as res:
-                rv: dict[str, str] = await res.json()
-                exclude_list = exclude_list + [_ for _ in rv.values()]
+                rv: list[FilterResponse] = await res.json()
+                exclude_list = exclude_list + [_["regexp"] for _ in rv]
 
         return _to_regex_list(exclude_list)
 
