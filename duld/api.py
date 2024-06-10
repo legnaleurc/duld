@@ -20,7 +20,12 @@ class TorrentsHandler(View):
             _L.error("no transmission")
             raise HTTPInternalServerError
 
-        torrents = get_completed(ctx.transmission)
+        try:
+            torrents = get_completed(ctx.transmission)
+        except Exception as e:
+            _L.error(f"transmission error: {e}, data: {ctx.transmission}")
+            raise HTTPInternalServerError
+
         group = self.request.app[SCHEDULER]
         uploader = self.request.app[UPLOADER]
         for t in torrents:
