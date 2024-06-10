@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path, PurePath
 
 from aiohttp.web import View, Response
@@ -9,10 +10,14 @@ from .torrent import get_completed, upload_by_id
 from .keys import CONTEXT, UPLOADER, SCHEDULER
 
 
+_L = logging.getLogger(__name__)
+
+
 class TorrentsHandler(View):
     async def post(self):
         ctx = self.request.app[CONTEXT]
         if not ctx.transmission:
+            _L.error("no transmission")
             raise HTTPInternalServerError
 
         torrents = get_completed(ctx.transmission)
@@ -34,10 +39,12 @@ class TorrentsHandler(View):
     async def put(self):
         ctx = self.request.app[CONTEXT]
         if not ctx.transmission:
+            _L.error("no transmission")
             raise HTTPInternalServerError
 
         torrent_id = self.request.match_info["torrent_id"]
         if not torrent_id:
+            _L.error("invalid torrent id")
             raise HTTPBadRequest
 
         group = self.request.app[SCHEDULER]
@@ -57,6 +64,7 @@ class HaHHandler(View):
     async def post(self):
         ctx = self.request.app[CONTEXT]
         if not ctx.hah_path:
+            _L.error("no hah")
             raise HTTPInternalServerError
 
         group = self.request.app[SCHEDULER]
