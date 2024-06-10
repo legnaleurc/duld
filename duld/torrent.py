@@ -19,7 +19,12 @@ async def upload_by_id(
     transmission: TransmissionData,
     torrent_id: int,
 ) -> None:
-    torrent_client = _connect_transmission(transmission)
+    try:
+        torrent_client = _connect_transmission(transmission)
+    except Exception as e:
+        _L.error(f"transmission error: {e}")
+        return
+
     torrent = torrent_client.get_torrent(torrent_id)
     if not torrent:
         _L.warning(f"no such torrent id {torrent_id}")
