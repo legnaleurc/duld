@@ -8,6 +8,7 @@ from contextlib import AsyncExitStack, contextmanager, asynccontextmanager
 from pathlib import Path, PurePath
 from typing import TypedDict
 
+import magic
 from aiohttp import ClientSession
 from wcpan.drive.cli.lib import (
     get_media_info,
@@ -175,8 +176,6 @@ class DriveUploader:
         raise UploadError(f"tried upload {RETRY_TIMES} times")
 
     async def _upload_file(self, node: Node, local_path: Path) -> None:
-        from mimetypes import guess_type
-
         file_name = local_path.name
         remote_path = await self._drive.resolve_path(node)
         remote_path = remote_path / file_name
@@ -198,13 +197,13 @@ class DriveUploader:
             _L.info(f"{remote_path} already exists and is the same file")
             return
 
-        type_, _ext = guess_type(local_path)
+        mime_type = _get_mime_type(local_path)
         media_info = await get_media_info(local_path)
         child_node = await upload_file_from_local(
             self._drive,
             local_path,
             node,
-            mime_type=type_,
+            mime_type=mime_type,
             media_info=media_info,
         )
 
@@ -300,3 +299,7 @@ def _to_pattern(pattern: str) -> re.Pattern[str] | None:
         return re.compile(pattern, re.I)
     except Exception:
         return None
+
+
+def _get_mime_type(file_path: Path) -> str:
+    return magic.from_file(file_path, mime=True)  # type: ignore
