@@ -30,7 +30,7 @@ FROM base AS production
 RUN : \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-        p7zip ffmpeg \
+        p7zip ffmpeg libmagic1 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
