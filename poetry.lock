@@ -821,17 +821,18 @@ zstd = ["zstandard (>=0.18.0)"]
 
 [[package]]
 name = "wcpan-drive-cli"
-version = "3.3.0"
+version = "3.4.0"
 description = "command line tool for wcpan.drive"
 optional = false
-python-versions = ">=3.12,<4.0"
+python-versions = "<4.0,>=3.12"
 files = [
-    {file = "wcpan_drive_cli-3.3.0-py3-none-any.whl", hash = "sha256:2f78f07fdd3020455887f8f2e71420bc43c11a95142540e1d3e1204328ab82a3"},
-    {file = "wcpan_drive_cli-3.3.0.tar.gz", hash = "sha256:64cc954c7cade623ce0905a7076aaee5317dbd6fdfbd94a7429bf1fe98ae0cb9"},
+    {file = "wcpan_drive_cli-3.4.0-py3-none-any.whl", hash = "sha256:35262bc66b4f7089fc4a7f9ce46e937bce433c5f002d64d1180985ad41a8b44d"},
+    {file = "wcpan_drive_cli-3.4.0.tar.gz", hash = "sha256:129468a4249cfe4ac8cfe4647ff8743828f641ff4c95fac63b40827b61d1859a"},
 ]
 
 [package.dependencies]
 Pillow = ">=9,<11"
+python-magic = ">=0.4.27,<0.5.0"
 PyYAML = ">=6.0.1,<7.0.0"
 wcpan-drive-core = ">=4.1.0,<5.0.0"
 wcpan-logging = ">=2.0.3,<3.0.0"
@@ -1020,4 +1021,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "9f01f3ac3a0a5f228bd05c5745d59b568b9b7addbe748cdd7ec8818f1d743304"
+content-hash = "fa0c24392aa6230933e0896bf90a2d747e9ff5c1d417b57aec1bdc03ab90c688"
