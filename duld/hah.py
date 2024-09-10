@@ -86,7 +86,7 @@ async def watch_hah_log(
     download_path = hah_path / "download"
     parse = _LogParser(log_path / "log_out", download_path)
     with Inotify() as watcher:
-        watcher.add_watch(log_path, Mask.MODIFY)
+        watcher.add_watch(log_path, Mask.MODIFY)  # type: ignore
         try:
             async for _event in watcher:
                 path_list = parse()
