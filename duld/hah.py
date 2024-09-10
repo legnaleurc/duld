@@ -31,6 +31,10 @@ class _LogParser(object):
         path_list = (self._parse_line(_) for _ in self._next_line())
         return [path for path in path_list if path]
 
+    def flush(self) -> None:
+        self._offset = self._log_path.stat().st_size
+        self._buffer = []
+
     def _read_new_lines(self) -> None:
         if self._offset > self._log_path.stat().st_size:
             # log rotated, scan from the scratch
@@ -89,11 +93,17 @@ async def watch_hah_log(
         watcher.add_watch(log_path, Mask.MODIFY)  # type: ignore
         try:
             async for _event in watcher:
-                path_list = parse()
+                try:
+                    path_list = parse()
+                except Exception:
+                    _L.exception("parser error")
+                    parse.flush()
+                    continue
+
                 for path in path_list:
                     group.create_task(_upload(uploader, path, upload_to))
         except Exception:
-            _L.exception(f"failed to pull from inotify")
+            _L.exception("failed to pull from inotify")
 
 
 def upload_finished(
