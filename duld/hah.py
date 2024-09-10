@@ -35,7 +35,7 @@ class _LogParser(object):
         if self._offset > self._log_path.stat().st_size:
             # log rotated, scan from the scratch
             self._offset = 0
-        with open(self._log_path, "r") as fin:
+        with self._log_path.open("r", errors="ignore") as fin:
             fin.seek(self._offset, os.SEEK_SET)
             lines = fin.readlines()
             self._offset = fin.tell()
