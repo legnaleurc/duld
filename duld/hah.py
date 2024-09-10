@@ -29,7 +29,9 @@ class _LogParser(object):
     def __call__(self) -> list[Path]:
         self._read_new_lines()
         path_list = (self._parse_line(_) for _ in self._next_line())
-        return [path for path in path_list if path]
+        path_list = (path for path in path_list if path)
+        unique_path_set = set(path_list)
+        return list(unique_path_set)
 
     def flush(self) -> None:
         self._offset = self._log_path.stat().st_size
