@@ -20,6 +20,12 @@ class TransmissionData:
 
 
 @dataclass
+class DvdData:
+    caches_searches_url: str
+    token: str | None
+
+
+@dataclass
 class Data:
     host: str
     port: int
@@ -31,6 +37,7 @@ class Data:
     reserved_space_in_gb: DiskSpaceData | None
     transmission: TransmissionData | None
     hah_path: str | None
+    dvd: DvdData | None
 
 
 def load_from_path(path: str) -> Data:

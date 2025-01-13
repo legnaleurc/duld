@@ -1,12 +1,16 @@
 import asyncio
+import json
 import logging
 import re
 from asyncio import Lock
 from collections.abc import Awaitable
 from concurrent.futures import Executor
 from contextlib import AsyncExitStack, contextmanager, asynccontextmanager
+from dataclasses import asdict
+from datetime import datetime
+from functools import partial
 from pathlib import Path, PurePath
-from typing import TypedDict
+from typing import Any, TypedDict, override
 
 from aiohttp import ClientSession
 from wcpan.drive.cli.lib import (
@@ -17,8 +21,11 @@ from wcpan.drive.cli.lib import (
     get_mime_type,
 )
 from wcpan.drive.core.types import Node, Drive
-from wcpan.drive.core.lib import upload_file_from_local
+from wcpan.drive.core.lib import upload_file_from_local, dispatch_change
 from wcpan.drive.core.exceptions import NodeNotFoundError
+
+from .dvd import DvdClient, create_dvd_client
+from .settings import DvdData
 
 
 RETRY_TIMES = 3
@@ -40,18 +47,22 @@ async def create_uploader(
     drive_config_path: str,
     exclude_pattern: list[str] | None,
     exclude_url: str | None,
+    dvd_data: DvdData | None,
 ):
     async with AsyncExitStack() as stack:
         pool = stack.enter_context(create_executor())
         path = Path(drive_config_path)
         drive = await stack.enter_async_context(create_drive_from_config(path))
-        curl = await stack.enter_async_context(ClientSession())
+        serializer = partial(json.dumps, cls=NodeEncoder)
+        curl = await stack.enter_async_context(ClientSession(json_serialize=serializer))
+        dvd_client = create_dvd_client(dvd_data, session=curl)
         yield DriveUploader(
             pool=pool,
             drive=drive,
             curl=curl,
             exclude_pattern=exclude_pattern,
             exclude_url=exclude_url,
+            dvd_client=dvd_client,
         )
 
 
@@ -64,12 +75,14 @@ class DriveUploader:
         curl: ClientSession,
         exclude_pattern: list[str] | None,
         exclude_url: str | None,
+        dvd_client: DvdClient,
     ):
         self._pool = pool
         self._curl = curl
         self._drive = drive
         self._exclude_pattern = [] if not exclude_pattern else exclude_pattern
         self._exclude_url = exclude_url
+        self._dvd = dvd_client
         self._jobs = set[Path | int]()
         self._sync_lock = Lock()
 
@@ -111,10 +124,23 @@ class DriveUploader:
     async def _sync(self):
         async with self._sync_lock:
             await asyncio.sleep(1)
+
             count = 0
-            async for _ in self._drive.sync():
+            nodes: list[Node] = []
+            async for change in self._drive.sync():
                 count += 1
+                dispatch_change(
+                    change,
+                    on_remove=lambda _: None,
+                    on_update=lambda _: nodes.append(_),
+                )
+
             _L.info(f"sync {count}")
+
+            try:
+                await self._dvd.update_search_cache_by_nodes(nodes)
+            except Exception:
+                _L.exception("failed to update dvd search cache")
 
     async def _upload(
         self, node: Node, local_path: Path, *, exclude_pattern: list[re.Pattern[str]]
@@ -266,6 +292,24 @@ class DriveUploader:
             except Exception:
                 _L.exception(f"error on updating local cache")
             await self._sync()
+
+
+class NodeEncoder(json.JSONEncoder):
+    @override
+    def default(self, o: Any) -> Any:
+        match o:
+            case Node():
+                return {
+                    "__type__": "Node",
+                    "__value__": asdict(o),
+                }
+            case datetime():
+                return {
+                    "__type__": "datetime",
+                    "__value__": o.isoformat(),
+                }
+            case _:
+                return super().default(o)
 
 
 @contextmanager

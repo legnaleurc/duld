@@ -73,6 +73,7 @@ class Daemon(object):
                     drive_config_path=self._cfg.drive_config_path,
                     exclude_pattern=self._cfg.exclude_pattern,
                     exclude_url=self._cfg.exclude_url,
+                    dvd_data=self._cfg.dvd,
                 )
             )
             app[UPLOADER] = uploader
