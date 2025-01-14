@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-import re
 from asyncio import Lock
 from collections.abc import Awaitable
 from concurrent.futures import Executor
@@ -10,7 +9,7 @@ from dataclasses import asdict
 from datetime import datetime
 from functools import partial
 from pathlib import Path, PurePath
-from typing import Any, TypedDict, override
+from typing import Any, override
 
 from aiohttp import ClientSession
 from wcpan.drive.cli.lib import (
@@ -24,17 +23,13 @@ from wcpan.drive.core.types import Node, Drive
 from wcpan.drive.core.lib import upload_file_from_local, dispatch_change
 from wcpan.drive.core.exceptions import NodeNotFoundError
 
+from .dfd import DfdClient, PatternList, create_dfd_client, should_exclude
 from .dvd import DvdClient, create_dvd_client
 from .settings import DvdData
 
 
 RETRY_TIMES = 3
 _L = logging.getLogger(__name__)
-
-
-class FilterResponse(TypedDict):
-    id: int
-    regexp: str
 
 
 class UploadError(Exception):
@@ -55,13 +50,15 @@ async def create_uploader(
         drive = await stack.enter_async_context(create_drive_from_config(path))
         serializer = partial(json.dumps, cls=NodeEncoder)
         curl = await stack.enter_async_context(ClientSession(json_serialize=serializer))
+        dfd_client = create_dfd_client(
+            exclude_pattern=exclude_pattern, exclude_url=exclude_url, session=curl
+        )
         dvd_client = create_dvd_client(dvd_data, session=curl)
         yield DriveUploader(
             pool=pool,
             drive=drive,
             curl=curl,
-            exclude_pattern=exclude_pattern,
-            exclude_url=exclude_url,
+            dfd_client=dfd_client,
             dvd_client=dvd_client,
         )
 
@@ -73,15 +70,13 @@ class DriveUploader:
         pool: Executor,
         drive: Drive,
         curl: ClientSession,
-        exclude_pattern: list[str] | None,
-        exclude_url: str | None,
+        dfd_client: DfdClient,
         dvd_client: DvdClient,
     ):
         self._pool = pool
         self._curl = curl
         self._drive = drive
-        self._exclude_pattern = [] if not exclude_pattern else exclude_pattern
-        self._exclude_url = exclude_url
+        self._dfd = dfd_client
         self._dvd = dvd_client
         self._jobs = set[Path | int]()
         self._sync_lock = Lock()
@@ -91,7 +86,7 @@ class DriveUploader:
             _L.warning(f"{local_path} is still uploading")
             return
 
-        exclude_pattern = await self._fetch_filters()
+        exclude_pattern = await self._dfd.fetch_filters()
 
         with job_guard(self._jobs, local_path):
             await self._sync()
@@ -109,7 +104,7 @@ class DriveUploader:
             _L.warning(f"{torrent_id} is still uploading")
             return
 
-        exclude_pattern = await self._fetch_filters()
+        exclude_pattern = await self._dfd.fetch_filters()
 
         with job_guard(self._jobs, torrent_id):
             await self._sync()
@@ -143,9 +138,9 @@ class DriveUploader:
                 _L.exception("failed to update dvd search cache")
 
     async def _upload(
-        self, node: Node, local_path: Path, *, exclude_pattern: list[re.Pattern[str]]
+        self, node: Node, local_path: Path, *, exclude_pattern: PatternList
     ) -> None:
-        if _should_exclude(local_path.name, exclude_pattern):
+        if should_exclude(local_path.name, exclude_pattern):
             _L.info(f"excluded {local_path}")
             return
 
@@ -153,16 +148,16 @@ class DriveUploader:
             _L.warning(f"cannot upload non-exist path {local_path}")
             return
 
-        if local_path.is_dir():
-            await self._upload_directory(
-                node, local_path, exclude_pattern=exclude_pattern
-            )
-        else:
+        if not local_path.is_dir():
             await self._upload_file_retry(node, local_path)
+            return
 
-    async def _upload_directory(
-        self, node: Node, local_path: Path, *, exclude_pattern: list[re.Pattern[str]]
-    ) -> None:
+        child_node = await self._upload_directory(node, local_path)
+
+        for child_path in local_path.iterdir():
+            await self._upload(child_node, child_path, exclude_pattern=exclude_pattern)
+
+    async def _upload_directory(self, node: Node, local_path: Path) -> Node:
         assert self._drive
 
         if node.is_trashed:
@@ -188,8 +183,7 @@ class DriveUploader:
         # In theory we should pass remote path instead of doing this.
         await self._ensure_node_exists(child_node)
 
-        for child_path in local_path.iterdir():
-            await self._upload(child_node, child_path, exclude_pattern=exclude_pattern)
+        return child_node
 
     async def _upload_file_retry(self, node: Node, local_path: Path) -> None:
         for _ in range(RETRY_TIMES):
@@ -272,16 +266,6 @@ class DriveUploader:
             _L.exception(f"failed to resolve name confliction")
         return False
 
-    async def _fetch_filters(self) -> list[re.Pattern[str]]:
-        exclude_list = self._exclude_pattern
-
-        if self._exclude_url:
-            async with self._curl.get(self._exclude_url) as res:
-                rv: list[FilterResponse] = await res.json()
-                exclude_list = exclude_list + [_["regexp"] for _ in rv]
-
-        return _to_regex_list(exclude_list)
-
     async def _ensure_node_exists(self, node: Node) -> None:
         while True:
             try:
@@ -325,21 +309,4 @@ async def _else_none(aw: Awaitable[Node]) -> Node | None:
     try:
         return await aw
     except NodeNotFoundError:
-        return None
-
-
-def _should_exclude(name: str, exclude_list: list[re.Pattern[str]]) -> bool:
-    return any(_.match(name) is not None for _ in exclude_list)
-
-
-def _to_regex_list(pattern_list: list[str]) -> list[re.Pattern[str]]:
-    non_empty = (_ for _ in pattern_list if _)
-    maybe_regex = (_to_pattern(_) for _ in non_empty)
-    return [_ for _ in maybe_regex if _]
-
-
-def _to_pattern(pattern: str) -> re.Pattern[str] | None:
-    try:
-        return re.compile(pattern, re.I)
-    except Exception:
         return None
