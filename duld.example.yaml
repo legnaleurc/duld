@@ -6,11 +6,13 @@ port: 1234
 upload_to: /tmp
 # the drive config
 drive_config_path: /path/to/drive/config.yaml
-# (optional) wont upload these files
-exclude_pattern:
-  - ^.*padding_file.*BitComet.*$
-# (optional) dynamic exclude pattern
-exclude_url: http://dfd/api/v1/filters
+# (optional) excluded files
+exclude:
+  # (optional) static filters in regexp
+  static:
+    - ^.*$
+  # (optional) dynamic filters from dfd
+  dynamic: http://dfd/api/v1/filters
 # daemon log file path
 log_path: /tmp/duld.log
 # (optional) transmission RPC settings

@@ -5,9 +5,11 @@ from typing import TypedDict, override
 
 from aiohttp import ClientSession
 
+from .settings import ExcludeData
 
-type Pattern = re.Pattern[str]
-type PatternList = list[Pattern]
+
+type _Filter = re.Pattern[str]
+type FilterList = list[_Filter]
 
 
 class _FilterData(TypedDict):
@@ -17,60 +19,61 @@ class _FilterData(TypedDict):
 
 class DfdClient(metaclass=ABCMeta):
     @abstractmethod
-    async def fetch_filters(self) -> PatternList:
+    async def fetch_filters(self) -> FilterList:
         pass
 
 
 def create_dfd_client(
+    exclude_data: ExcludeData | None,
     *,
-    exclude_pattern: list[str] | None,
-    exclude_url: str | None,
     session: ClientSession,
 ) -> DfdClient:
-    pattern = _to_regex_list(exclude_pattern if exclude_pattern else [])
-    if not exclude_url:
-        return _SimpleDfdClient(exclude_pattern=pattern)
+    if not exclude_data:
+        return _StaticDfdClient(static=[])
+    static = _to_regex_list(exclude_data.static if exclude_data.static else [])
+    if not exclude_data.dynamic:
+        return _StaticDfdClient(static=static)
     return _DefaultDfdClient(
-        exclude_pattern=pattern, exclude_url=exclude_url, session=session
+        static=static, dynamic=exclude_data.dynamic, session=session
     )
 
 
-def should_exclude(name: str, exclude_list: PatternList) -> bool:
+def should_exclude(name: str, exclude_list: FilterList) -> bool:
     return any(_.match(name) is not None for _ in exclude_list)
 
 
-class _SimpleDfdClient(DfdClient):
-    def __init__(self, *, exclude_pattern: PatternList) -> None:
-        self._const = exclude_pattern
+class _StaticDfdClient(DfdClient):
+    def __init__(self, *, static: FilterList) -> None:
+        self._const = static
 
     @override
-    async def fetch_filters(self) -> PatternList:
+    async def fetch_filters(self) -> FilterList:
         return self._const
 
 
 class _DefaultDfdClient(DfdClient):
     def __init__(
-        self, *, exclude_pattern: PatternList, exclude_url: str, session: ClientSession
+        self, *, static: FilterList, dynamic: str, session: ClientSession
     ) -> None:
-        self._const = exclude_pattern
-        self._url = exclude_url
+        self._const = static
+        self._url = dynamic
         self._curl = session
 
     @override
-    async def fetch_filters(self) -> PatternList:
+    async def fetch_filters(self) -> FilterList:
         async with self._curl.get(self._url) as response:
             filters: list[_FilterData] = await response.json()
         rv = _to_regex_list(_["regexp"] for _ in filters)
         return self._const + rv
 
 
-def _to_regex_list(raw_regex_iter: Iterable[str]) -> PatternList:
+def _to_regex_list(raw_regex_iter: Iterable[str]) -> FilterList:
     non_empty = (_ for _ in raw_regex_iter if _)
     maybe_regex = (_to_pattern(_) for _ in non_empty)
     return [_ for _ in maybe_regex if _]
 
 
-def _to_pattern(pattern: str) -> Pattern | None:
+def _to_pattern(pattern: str) -> _Filter | None:
     try:
         return re.compile(pattern, re.I)
     except Exception:

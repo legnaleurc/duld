@@ -23,9 +23,9 @@ from wcpan.drive.core.types import Node, Drive
 from wcpan.drive.core.lib import upload_file_from_local, dispatch_change
 from wcpan.drive.core.exceptions import NodeNotFoundError
 
-from .dfd import DfdClient, PatternList, create_dfd_client, should_exclude
+from .dfd import DfdClient, FilterList, create_dfd_client, should_exclude
 from .dvd import DvdClient, create_dvd_client
-from .settings import DvdData
+from .settings import DvdData, ExcludeData
 
 
 RETRY_TIMES = 3
@@ -40,8 +40,7 @@ class UploadError(Exception):
 async def create_uploader(
     *,
     drive_config_path: str,
-    exclude_pattern: list[str] | None,
-    exclude_url: str | None,
+    exclude_data: ExcludeData | None,
     dvd_data: DvdData | None,
 ):
     async with AsyncExitStack() as stack:
@@ -50,9 +49,7 @@ async def create_uploader(
         drive = await stack.enter_async_context(create_drive_from_config(path))
         serializer = partial(json.dumps, cls=NodeEncoder)
         curl = await stack.enter_async_context(ClientSession(json_serialize=serializer))
-        dfd_client = create_dfd_client(
-            exclude_pattern=exclude_pattern, exclude_url=exclude_url, session=curl
-        )
+        dfd_client = create_dfd_client(exclude_data, session=curl)
         dvd_client = create_dvd_client(dvd_data, session=curl)
         yield DriveUploader(
             pool=pool,
@@ -86,12 +83,12 @@ class DriveUploader:
             _L.warning(f"{local_path} is still uploading")
             return
 
-        exclude_pattern = await self._dfd.fetch_filters()
+        filters = await self._dfd.fetch_filters()
 
         with job_guard(self._jobs, local_path):
             await self._sync()
             node = await self._drive.get_node_by_path(remote_path)
-            await self._upload(node, local_path, exclude_pattern=exclude_pattern)
+            await self._upload(node, local_path, filters=filters)
 
     async def upload_from_torrent(
         self,
@@ -104,7 +101,7 @@ class DriveUploader:
             _L.warning(f"{torrent_id} is still uploading")
             return
 
-        exclude_pattern = await self._dfd.fetch_filters()
+        filters = await self._dfd.fetch_filters()
 
         with job_guard(self._jobs, torrent_id):
             await self._sync()
@@ -114,7 +111,7 @@ class DriveUploader:
             # files/directories to be upload
             items = (Path(torrent_root, _) for _ in root_items)
             for item in items:
-                await self._upload(node, item, exclude_pattern=exclude_pattern)
+                await self._upload(node, item, filters=filters)
 
     async def _sync(self):
         async with self._sync_lock:
@@ -138,9 +135,9 @@ class DriveUploader:
                 _L.exception("failed to update dvd search cache")
 
     async def _upload(
-        self, node: Node, local_path: Path, *, exclude_pattern: PatternList
+        self, node: Node, local_path: Path, *, filters: FilterList
     ) -> None:
-        if should_exclude(local_path.name, exclude_pattern):
+        if should_exclude(local_path.name, filters):
             _L.info(f"excluded {local_path}")
             return
 
@@ -155,7 +152,7 @@ class DriveUploader:
         child_node = await self._upload_directory(node, local_path)
 
         for child_path in local_path.iterdir():
-            await self._upload(child_node, child_path, exclude_pattern=exclude_pattern)
+            await self._upload(child_node, child_path, filters=filters)
 
     async def _upload_directory(self, node: Node, local_path: Path) -> Node:
         assert self._drive

@@ -5,6 +5,12 @@ import yaml
 
 
 @dataclass
+class ExcludeData:
+    static: list[str] | None
+    dynamic: str | None
+
+
+@dataclass
 class DiskSpaceData:
     safe: int
     danger: int
@@ -32,8 +38,7 @@ class Data:
     drive_config_path: str
     upload_to: str
     log_path: str | None
-    exclude_pattern: list[str] | None
-    exclude_url: str | None
+    exclude: ExcludeData | None
     reserved_space_in_gb: DiskSpaceData | None
     transmission: TransmissionData | None
     hah_path: str | None

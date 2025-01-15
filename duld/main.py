@@ -69,8 +69,7 @@ class Daemon:
             uploader = await stack.enter_async_context(
                 create_uploader(
                     drive_config_path=self._cfg.drive_config_path,
-                    exclude_pattern=self._cfg.exclude_pattern,
-                    exclude_url=self._cfg.exclude_url,
+                    exclude_data=self._cfg.exclude,
                     dvd_data=self._cfg.dvd,
                 )
             )
