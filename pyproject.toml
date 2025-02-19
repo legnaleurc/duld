@@ -1,10 +1,16 @@
-[tool.poetry]
+[project]
 name = "duld"
 version = "0.1.0"
 description = "Drive UpLoad Daemon"
-authors = ["Wei-Cheng Pan <legnaleurc@gmail.com>"]
 license = "MIT"
 readme = "README.md"
+authors = [
+    {name = "Wei-Cheng Pan", email = "legnaleurc@gmail.com"}
+]
+dynamic = ["dependencies", "requires-python"]
+
+[tool.poetry]
+requires-poetry = "^2.1"
 package-mode = false
 
 [tool.poetry.dependencies]

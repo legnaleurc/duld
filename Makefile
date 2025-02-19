@@ -7,7 +7,7 @@ PKG_LOCK := poetry.lock
 ENV_DIR := .venv
 ENV_LOCK := $(ENV_DIR)/pyvenv.cfg
 
-.PHONY: all format lint purge test venv
+.PHONY: all format lint purge test
 
 all: venv
 
@@ -18,7 +18,7 @@ lint: venv
 	$(BLACK) --check duld
 
 purge:
-	$(RM) -rf $(ENV_DIR)
+	$(RM) $(ENV_DIR)
 
 test: venv
 	$(PYTHON) -m compileall duld
@@ -30,5 +30,5 @@ $(ENV_LOCK): $(PKG_LOCK)
 	touch $@
 
 $(PKG_LOCK): $(PKG_FILES)
-	poetry lock --no-update
+	poetry lock
 	touch $@
