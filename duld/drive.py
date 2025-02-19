@@ -215,7 +215,7 @@ class DriveUploader:
             return
 
         mime_type = get_mime_type(local_path)
-        media_info = await get_media_info(local_path)
+        media_info = get_media_info(local_path)
         child_node = await upload_file_from_local(
             self._drive,
             local_path,
