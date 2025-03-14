@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-from asyncio import Lock
+from asyncio import Lock, as_completed
 from collections.abc import Awaitable
 from concurrent.futures import Executor
 from contextlib import AsyncExitStack, contextmanager, asynccontextmanager
@@ -26,6 +26,7 @@ from wcpan.drive.core.exceptions import NodeNotFoundError
 from .dfd import DfdClient, FilterList, create_dfd_client, should_exclude
 from .dvd import DvdClient, create_dvd_client
 from .settings import DvdData, ExcludeData
+from .processors import compress_context
 
 
 RETRY_TIMES = 3
@@ -109,9 +110,15 @@ class DriveUploader:
             node = await self._drive.get_node_by_path(remote_path)
 
             # files/directories to be upload
-            items = (Path(torrent_root, _) for _ in root_items)
-            for item in items:
-                await self._upload(node, item, filters=filters)
+            src_list = (Path(torrent_root, _) for _ in root_items)
+
+            with compress_context() as compress_avif:
+                pending_list = as_completed((compress_avif(_) for _ in src_list))
+
+                async_list = (await _ for _ in pending_list)
+
+                async for item in async_list:
+                    await self._upload(node, item, filters=filters)
 
     async def _sync(self):
         async with self._sync_lock:

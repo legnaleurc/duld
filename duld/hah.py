@@ -10,6 +10,7 @@ from asyncio import TaskGroup
 from asyncinotify import Inotify, Mask
 
 from .drive import DriveUploader
+from .lib import compress_to_path
 
 
 _L = logging.getLogger(__name__)
@@ -164,7 +165,7 @@ async def _upload(uploader: DriveUploader, src_path: Path, dst_path: PurePath) -
         with TemporaryDirectory() as tmp:
             work_path = Path(tmp)
             _L.info(f"compressing {src_path} to {work_path} ...")
-            tmp_path = await _archive_hah_path(src_path, work_path)
+            tmp_path = await compress_to_path(src_path, work_path)
             _L.info(f"hah upload {tmp_path}")
             await uploader.upload_from_hah(dst_path, tmp_path)
     except Exception:
@@ -172,27 +173,3 @@ async def _upload(uploader: DriveUploader, src_path: Path, dst_path: PurePath) -
         return
     _L.debug(f"rm -rf {src_path}")
     shutil.rmtree(src_path, ignore_errors=True)
-
-
-async def _archive_hah_path(src_path: Path, work_path: Path) -> Path:
-    from asyncio import create_subprocess_exec
-    from asyncio.subprocess import DEVNULL
-
-    name = f"{src_path.name}.7z"
-    out_path = work_path / name
-    cmd = [
-        "7zr",
-        "a",
-        "-y",
-        str(out_path),
-        "*",
-    ]
-    p = await create_subprocess_exec(
-        *cmd, cwd=str(src_path), stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL
-    )
-    rv = await p.wait()
-    if rv != 0:
-        raise RuntimeError(f"compress error: {src_path}")
-    if not out_path.is_file():
-        raise RuntimeError(f"compress error: {src_path}")
-    return out_path
