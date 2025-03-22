@@ -9,7 +9,7 @@ from asyncio import TaskGroup, Event, get_running_loop
 from aiohttp.web import Application, AppRunner, TCPSite
 from wcpan.logging import ConfigBuilder
 
-from .api import HaHHandler, TorrentsHandler
+from .api import HaHHandler, TorrentsHandler, LinksHandler
 from .drive import create_uploader
 from .hah import watch_hah_log
 from .settings import load_from_path
@@ -59,6 +59,7 @@ class Daemon:
             app.router.add_view(r"/api/v1/torrents/{torrent_id:\d+}", TorrentsHandler)
         if self._cfg.hah_path:
             app.router.add_view(r"/api/v1/hah", HaHHandler)
+        app.router.add_view(r"/api/v1/links", LinksHandler)
 
         async with AsyncExitStack() as stack:
             app[CONTEXT] = self._cfg

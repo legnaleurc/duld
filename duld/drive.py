@@ -120,6 +120,12 @@ class DriveUploader:
                 async for item in async_list:
                     await self._upload(node, item, filters=filters)
 
+    async def upload_from_path(self, remote_path: PurePath, local_path: Path) -> None:
+        with job_guard(self._jobs, local_path):
+            await self._sync()
+            node = await self._drive.get_node_by_path(remote_path)
+            await self._upload(node, local_path, filters=[])
+
     async def _sync(self):
         async with self._sync_lock:
             await asyncio.sleep(1)

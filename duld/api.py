@@ -1,12 +1,14 @@
 import json
 import logging
 from pathlib import Path, PurePath
+from typing import TypedDict, NotRequired
 
 from aiohttp.web import View, Response
 from aiohttp.web_exceptions import HTTPBadRequest, HTTPInternalServerError
 
 from .hah import upload_finished
 from .torrent import get_completed, upload_by_id
+from .links import upload_from_url
 from .keys import CONTEXT, UPLOADER, SCHEDULER
 
 
@@ -83,3 +85,37 @@ class HaHHandler(View):
         result = json.dumps(folders)
         result = result + "\n"
         return Response(text=result, content_type="application/json")
+
+
+class LinksData(TypedDict):
+    url: str
+    name: NotRequired[str]
+
+
+class LinksHandler(View):
+    async def post(self):
+        data: LinksData = await self.request.json()
+        if not data:
+            raise HTTPBadRequest
+
+        try:
+            url = data["url"]
+            name = data.get("name", None)
+        except KeyError:
+            raise HTTPBadRequest
+
+        if not url:
+            raise HTTPBadRequest
+
+        ctx = self.request.app[CONTEXT]
+        group = self.request.app[SCHEDULER]
+        uploader = self.request.app[UPLOADER]
+        group.create_task(
+            upload_from_url(
+                url,
+                name,
+                upload_to=PurePath(ctx.upload_to),
+                uploader=uploader,
+            )
+        )
+        return Response(status=204)
