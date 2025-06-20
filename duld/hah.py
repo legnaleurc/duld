@@ -3,9 +3,9 @@ import logging
 import os
 import re
 import shutil
+from asyncio import TaskGroup
 from pathlib import Path, PurePath
 from tempfile import TemporaryDirectory
-from asyncio import TaskGroup
 
 from asyncinotify import Inotify, Mask
 

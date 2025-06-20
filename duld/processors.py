@@ -1,8 +1,8 @@
 from contextlib import contextmanager
 from functools import partial
+from logging import getLogger
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from logging import getLogger
 
 from .lib import compress_to_path
 

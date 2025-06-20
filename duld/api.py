@@ -1,15 +1,15 @@
 import json
 import logging
 from pathlib import Path, PurePath
-from typing import TypedDict, NotRequired
+from typing import NotRequired, TypedDict
 
-from aiohttp.web import View, Response
+from aiohttp.web import Response, View
 from aiohttp.web_exceptions import HTTPBadRequest, HTTPInternalServerError
 
 from .hah import upload_finished
-from .torrent import get_completed, upload_by_id
+from .keys import CONTEXT, SCHEDULER, UPLOADER
 from .links import upload_from_url
-from .keys import CONTEXT, UPLOADER, SCHEDULER
+from .torrent import get_completed, upload_by_id
 
 
 _L = logging.getLogger(__name__)

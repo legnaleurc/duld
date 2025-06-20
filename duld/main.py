@@ -1,20 +1,20 @@
 import logging
 import signal
-from pathlib import Path, PurePath
+from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
+from asyncio import Event, TaskGroup, get_running_loop
 from collections.abc import Coroutine
 from contextlib import AsyncExitStack, asynccontextmanager
-from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
-from asyncio import TaskGroup, Event, get_running_loop
+from pathlib import Path, PurePath
 
 from aiohttp.web import Application, AppRunner, TCPSite
 from wcpan.logging import ConfigBuilder
 
-from .api import HaHHandler, TorrentsHandler, LinksHandler
+from .api import HaHHandler, LinksHandler, TorrentsHandler
 from .drive import create_uploader
 from .hah import watch_hah_log
+from .keys import CONTEXT, SCHEDULER, UPLOADER
 from .settings import load_from_path
 from .torrent import watch_disk_space
-from .keys import CONTEXT, UPLOADER, SCHEDULER
 
 
 type _Runnable[T] = Coroutine[None, None, T]
