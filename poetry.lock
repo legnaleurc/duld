@@ -141,14 +141,14 @@ frozenlist = ">=1.1.0"
 
 [[package]]
 name = "asyncinotify"
-version = "4.0.4"
+version = "4.2.1"
 description = "A simple optionally-async python inotify library, focused on simplicity of use and operation, and leveraging modern Python features"
 optional = false
-python-versions = ">= 3.6, < 4"
+python-versions = "<4,>=3.6"
 groups = ["main"]
 files = [
-    {file = "asyncinotify-4.0.4-py3-none-any.whl", hash = "sha256:4fece45b5ae30f37b649393f6ee309c016494452e790110222e2d575bc1616bf"},
-    {file = "asyncinotify-4.0.4.tar.gz", hash = "sha256:811051db219e8d6bee14ac7cb58a0ebe565094f7aabb988943b1d9d58e994381"},
+    {file = "asyncinotify-4.2.1-py3-none-any.whl", hash = "sha256:40a982e76e9450fbb56858620565cdeb21c35849585ceba1a1a90b8b74d1e15e"},
+    {file = "asyncinotify-4.2.1.tar.gz", hash = "sha256:8078b0b0d81c19043141ab0fc5654e89a4d3023dc3e4486aaa245b1ff5f5ddc9"},
 ]
 
 [[package]]
@@ -1028,4 +1028,4 @@ propcache = ">=0.2.0"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "ee2ffc7b2e8e7853670060a049bcdb5cbaa0cd7eb0bf31be84a97b30f13334a0"
+content-hash = "06e2473814a222114f80e9589d0d744e123cca5a3f2b0272ba8e8e73e964860f"
