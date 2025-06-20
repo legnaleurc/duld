@@ -166,7 +166,7 @@ def _halt_pending_torrents(client: Client) -> None:
     torrent_id_list = [
         t.id for t in torrents if t.status == "downloading" and t.downloaded_ever == 0
     ]
-    client.stop_torrent(torrent_id_list)
+    client.stop_torrent(torrent_id_list) # type: ignore
 
 
 def _resume_halted_torrents(client: Client) -> None:
@@ -174,4 +174,4 @@ def _resume_halted_torrents(client: Client) -> None:
     torrent_id_list = [
         t.id for t in torrents if t.status == "stopped" and t.downloaded_ever == 0
     ]
-    client.start_torrent(torrent_id_list)
+    client.start_torrent(torrent_id_list) # type: ignore
