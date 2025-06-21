@@ -1,4 +1,5 @@
 import logging
+import re
 import shutil
 from asyncio import TaskGroup
 from pathlib import Path, PurePath
@@ -52,8 +53,13 @@ def upload_finished_hah(
 
 async def _upload(uploader: DriveUploader, src_path: Path, dst_path: PurePath) -> None:
     if not src_path.exists():
-        _L.info(f"hah ignored deleted path {src_path}")
+        _L.info(f"hah ignored deleted path: {src_path}")
         return
+
+    if _is_truncated_by_hah(src_path.name):
+        _L.error(f"directory name too long: {src_path}")
+        return
+
     try:
         with TemporaryDirectory() as tmp:
             work_path = Path(tmp)
@@ -66,3 +72,8 @@ async def _upload(uploader: DriveUploader, src_path: Path, dst_path: PurePath) -
         return
     _L.debug(f"rm -rf {src_path}")
     shutil.rmtree(src_path, ignore_errors=True)
+
+
+def _is_truncated_by_hah(name: str) -> bool:
+    rv = re.match(r"^\d+$", name)
+    return rv is not None
