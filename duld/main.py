@@ -11,7 +11,7 @@ from wcpan.logging import ConfigBuilder
 
 from .api import HaHHandler, LinksHandler, TorrentsHandler
 from .drive import create_uploader
-from .hah import watch_hah_log
+from .hah import watch_finished_hah
 from .keys import CONTEXT, SCHEDULER, UPLOADER
 from .settings import load_from_path
 from .torrent import watch_disk_space
@@ -80,7 +80,7 @@ class Daemon:
                 await stack.enter_async_context(
                     _background(
                         group,
-                        watch_hah_log(
+                        watch_finished_hah(
                             hah_path=Path(self._cfg.hah_path),
                             uploader=uploader,
                             upload_to=PurePath(self._cfg.upload_to),

@@ -6,7 +6,7 @@ from typing import NotRequired, TypedDict
 from aiohttp.web import Response, View
 from aiohttp.web_exceptions import HTTPBadRequest, HTTPInternalServerError
 
-from .hah import upload_finished
+from .hah import upload_finished_hah
 from .keys import CONTEXT, SCHEDULER, UPLOADER
 from .links import upload_from_url
 from .torrent import get_completed, upload_by_id
@@ -76,13 +76,14 @@ class HaHHandler(View):
 
         group = self.request.app[SCHEDULER]
         uploader = self.request.app[UPLOADER]
-        folders = upload_finished(
+        folders = upload_finished_hah(
             hah_path=Path(ctx.hah_path),
             uploader=uploader,
             upload_to=PurePath(ctx.upload_to),
             group=group,
         )
-        result = json.dumps(folders)
+        finished = [folder.name for folder in folders]
+        result = json.dumps(finished)
         result = result + "\n"
         return Response(text=result, content_type="application/json")
 
