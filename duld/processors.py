@@ -23,6 +23,8 @@ async def _compress_avif(src_path: Path, /, *, work_path: Path) -> Path:
     if not src_path.name.endswith("[AVIF][DL版]"):
         return src_path
     _L.info(f"compressing {src_path}")
-    compressed_path = await compress_to_path(src_path, work_path)
+    compressed_path = await compress_to_path(
+        src_path, work_path, base_name=src_path.name
+    )
     _L.info(f"compressed {compressed_path}")
     return compressed_path

@@ -79,17 +79,17 @@ class DriveUploader:
         self._jobs = set[Path | int]()
         self._sync_lock = Lock()
 
-    async def upload_from_hah(self, remote_path: PurePath, local_path: Path) -> None:
+    async def upload_from_hah(
+        self, remote_path: PurePath, local_path: Path, *, remote_name: str
+    ) -> None:
         if local_path in self._jobs:
             _L.warning(f"{local_path} is still uploading")
             return
 
-        filters = await self._dfd.fetch_filters()
-
         with job_guard(self._jobs, local_path):
             await self._sync()
             node = await self._drive.get_node_by_path(remote_path)
-            await self._upload(node, local_path, filters=filters)
+            await self._upload_file_retry(node, local_path, remote_name=remote_name)
 
     async def upload_from_torrent(
         self,
@@ -159,7 +159,7 @@ class DriveUploader:
             return
 
         if not local_path.is_dir():
-            await self._upload_file_retry(node, local_path)
+            await self._upload_file_retry(node, local_path, remote_name=local_path.name)
             return
 
         child_node = await self._upload_directory(node, local_path)
@@ -195,22 +195,25 @@ class DriveUploader:
 
         return child_node
 
-    async def _upload_file_retry(self, node: Node, local_path: Path) -> None:
+    async def _upload_file_retry(
+        self, node: Node, local_path: Path, *, remote_name: str
+    ) -> None:
         for _ in range(RETRY_TIMES):
             try:
-                await self._upload_file(node, local_path)
+                await self._upload_file(node, local_path, remote_name=remote_name)
                 return
             except Exception:
                 _L.exception("retry upload file")
             await self._sync()
         raise UploadError(f"tried upload {RETRY_TIMES} times")
 
-    async def _upload_file(self, node: Node, local_path: Path) -> None:
-        file_name = local_path.name
+    async def _upload_file(
+        self, node: Node, local_path: Path, *, remote_name: str
+    ) -> None:
         remote_path = await self._drive.resolve_path(node)
-        remote_path = remote_path / file_name
+        remote_path = remote_path / remote_name
 
-        child_node = await _else_none(self._drive.get_child_by_name(file_name, node))
+        child_node = await _else_none(self._drive.get_child_by_name(remote_name, node))
 
         if child_node:
             if child_node.is_trashed:
