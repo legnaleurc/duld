@@ -3,9 +3,9 @@ import shutil
 from asyncio import TaskGroup
 from pathlib import Path, PurePath
 from tempfile import TemporaryDirectory
-
-from asyncinotify import Mask, RecursiveWatcher, Event
 from typing import cast
+
+from asyncinotify import Event, Mask, RecursiveWatcher
 
 from .drive import DriveUploader
 from .lib import compress_to_path
@@ -22,11 +22,11 @@ async def watch_finished_hah(
     uploader: DriveUploader,
     upload_to: PurePath,
     group: TaskGroup,
-    )-> None:
+) -> None:
     download_path = hah_path / "download"
 
     watcher = RecursiveWatcher(download_path, Mask.CREATE)
-    async for _event in watcher.watch_recursive(): # type: ignore
+    async for _event in watcher.watch_recursive():  # type: ignore
         event = cast(Event, _event)
         path = event.path
         if not path:
