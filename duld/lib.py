@@ -7,6 +7,9 @@ async def compress_to_path(src_path: Path, dst_path: Path) -> Path:
 
     name = f"{src_path.name}.7z"
     out_path = dst_path / name
+
+    _assert_file_writable(out_path)
+
     cmd = [
         "7zr",
         "a",
@@ -23,3 +26,8 @@ async def compress_to_path(src_path: Path, dst_path: Path) -> Path:
     if not out_path.is_file():
         raise RuntimeError(f"compress error: {src_path}")
     return out_path
+
+
+def _assert_file_writable(path: Path) -> None:
+    path.touch()
+    path.unlink()

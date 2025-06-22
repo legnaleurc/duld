@@ -39,7 +39,7 @@ async def watch_finished_hah(
 
 def upload_finished_hah(
     *, hah_path: Path, uploader: DriveUploader, upload_to: PurePath, group: TaskGroup
-):
+) -> list[Path]:
     download_path = hah_path / "download"
 
     finished: list[Path] = []
