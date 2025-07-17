@@ -7,7 +7,6 @@ services:
       - ${DULD_DRIVE_FILE}:/mnt/drive.yaml:ro
       - ${DULD_DRIVE_CONFIG_PATH}:/mnt/config:ro
       - ${DULD_DRIVE_DATA_PATH}:/mnt/data:rw
-      - ${DULD_LOG_PATH}:/mnt/log:rw
       - ${DULD_TM_PATH:-/tmp}:/mnt/tm:ro
       - ${DULD_HAH_PATH:-/tmp}:/mnt/hah:rw
     ports:
@@ -20,4 +19,8 @@ services:
       POETRY_CACHE_DIR: /tmp
       DULD_UID: ${DULD_UID}
       DULD_GID: ${DULD_GID}
+    logging:
+      driver: "syslog"
+      options:
+        tag: "duld-duld"
     command: /app/scripts/start.sh

@@ -13,7 +13,7 @@ exclude:
     - ^.*$
   # (optional) dynamic filters from dfd
   dynamic: http://dfd/api/v1/filters
-# daemon log file path
+# daemon log file path, or null to output to stderr
 log_path: /tmp/duld.log
 # (optional) transmission RPC settings
 transmission:
