@@ -3,6 +3,8 @@ services:
     build:
       target: production
     volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
       - ${DULD_CONFIG_FILE}:/mnt/duld.yaml:ro
       - ${DULD_DRIVE_FILE}:/mnt/drive.yaml:ro
       - ${DULD_DRIVE_CONFIG_PATH}:/mnt/config:ro
@@ -14,7 +16,6 @@ services:
     extra_hosts:
       host.docker.internal: host-gateway
     environment:
-      TZ: ${DULD_TZ:-}
       POETRY_CONFIG_DIR: /tmp
       POETRY_CACHE_DIR: /tmp
       DULD_UID: ${DULD_UID}
