@@ -62,6 +62,7 @@ class _DefaultDfdClient(DfdClient):
     @override
     async def fetch_filters(self) -> FilterList:
         async with self._curl.get(self._url) as response:
+            response.raise_for_status()
             filters: list[_FilterData] = await response.json()
         rv = _to_regex_list(_["regexp"] for _ in filters)
         return self._const + rv
