@@ -236,6 +236,7 @@ class DriveUploader:
             self._drive,
             local_path,
             node,
+            name=remote_name,
             mime_type=mime_type,
             media_info=media_info,
         )
