@@ -1,4 +1,4 @@
-FROM python:3.12-slim-bookworm AS base
+FROM python:3.12-slim-trixie AS base
 
 # env
 ENV POETRY_HOME=/opt/poetry
@@ -30,7 +30,7 @@ FROM base AS production
 RUN : \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-        p7zip libmagic1 \
+        7zip libmagic1t64 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
