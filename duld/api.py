@@ -17,6 +17,32 @@ _L = logging.getLogger(__name__)
 
 class TorrentsHandler(View):
     async def post(self):
+        return self._upload_completed()
+
+    async def put(self):
+        ctx = self.request.app[CONTEXT]
+        if not ctx.transmission:
+            _L.error("no transmission")
+            raise HTTPInternalServerError
+
+        torrent_id = self.request.match_info["torrent_id"]
+        if not torrent_id:
+            _L.error("invalid torrent id")
+            raise HTTPBadRequest
+
+        group = self.request.app[SCHEDULER]
+        uploader = self.request.app[UPLOADER]
+        group.create_task(
+            upload_by_id(
+                uploader=uploader,
+                upload_to=PurePath(ctx.upload_to),
+                transmission=ctx.transmission,
+                torrent_id=int(torrent_id),
+            )
+        )
+        return Response(status=204)
+
+    async def _upload_completed(self) -> Response:
         ctx = self.request.app[CONTEXT]
         if not ctx.transmission:
             _L.error("no transmission")
@@ -42,29 +68,6 @@ class TorrentsHandler(View):
         result = json.dumps([_.id for _ in torrents])
         result = result + "\n"
         return Response(text=result, content_type="application/json")
-
-    async def put(self):
-        ctx = self.request.app[CONTEXT]
-        if not ctx.transmission:
-            _L.error("no transmission")
-            raise HTTPInternalServerError
-
-        torrent_id = self.request.match_info["torrent_id"]
-        if not torrent_id:
-            _L.error("invalid torrent id")
-            raise HTTPBadRequest
-
-        group = self.request.app[SCHEDULER]
-        uploader = self.request.app[UPLOADER]
-        group.create_task(
-            upload_by_id(
-                uploader=uploader,
-                upload_to=PurePath(ctx.upload_to),
-                transmission=ctx.transmission,
-                torrent_id=int(torrent_id),
-            )
-        )
-        return Response(status=204)
 
 
 class HaHHandler(View):
