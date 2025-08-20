@@ -62,6 +62,25 @@ def get_completed(transmission: TransmissionData) -> list[Torrent]:
     return list(completed)
 
 
+async def add_urls(
+    urls: list[str],
+    *,
+    transmission: TransmissionData,
+) -> dict[str, Torrent | None]:
+    torrent_client = _connect_transmission(transmission)
+
+    torrent_dict: dict[str, Torrent | None] = {}
+    for url in urls:
+        try:
+            torrent = torrent_client.add_torrent(url, paused=True)
+            torrent_dict[url] = torrent
+        except Exception as e:
+            _L.error(f"failed to add torrent {url}: {e}")
+            torrent_dict[url] = None
+
+    return torrent_dict
+
+
 def _get_root_items(torrent: Torrent) -> list[str]:
     files = torrent.get_files()
     common: set[str] = set()

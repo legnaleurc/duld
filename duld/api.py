@@ -9,15 +9,25 @@ from aiohttp.web_exceptions import HTTPBadRequest, HTTPInternalServerError
 from .hah import upload_finished_hah
 from .keys import CONTEXT, SCHEDULER, UPLOADER
 from .links import upload_from_url
-from .torrent import get_completed, upload_by_id
+from .torrent import add_urls, get_completed, upload_by_id
 
 
 _L = logging.getLogger(__name__)
 
 
+class CreateTorrentsData(TypedDict):
+    urls: list[str]
+
+
 class TorrentsHandler(View):
     async def post(self):
-        return self._upload_completed()
+        if not self.request.has_body:
+            return await self._upload_completed()
+
+        payload: CreateTorrentsData = await self.request.json()
+        if not payload or "urls" not in payload:
+            raise HTTPBadRequest
+        return await self._add_urls(payload["urls"])
 
     async def put(self):
         ctx = self.request.app[CONTEXT]
@@ -66,8 +76,27 @@ class TorrentsHandler(View):
                 )
             )
         result = json.dumps([_.id for _ in torrents])
-        result = result + "\n"
-        return Response(text=result, content_type="application/json")
+        return _json_response(result)
+
+    async def _add_urls(self, urls: list[str]) -> Response:
+        ctx = self.request.app[CONTEXT]
+        if not ctx.transmission:
+            _L.error("no transmission")
+            raise HTTPInternalServerError
+
+        torrent_dict = await add_urls(urls, transmission=ctx.transmission)
+        result: dict[str, dict[str, object] | None] = {
+            url: (
+                {
+                    "id": torrent.id,
+                    "name": torrent.name,
+                }
+                if torrent
+                else None
+            )
+            for url, torrent in torrent_dict.items()
+        }
+        return _json_response(result)
 
 
 class HaHHandler(View):
@@ -86,9 +115,7 @@ class HaHHandler(View):
             group=group,
         )
         finished = [folder.name for folder in folders]
-        result = json.dumps(finished)
-        result = result + "\n"
-        return Response(text=result, content_type="application/json")
+        return _json_response(finished)
 
 
 class LinksData(TypedDict):
@@ -123,3 +150,9 @@ class LinksHandler(View):
             )
         )
         return Response(status=204)
+
+
+def _json_response(data: object) -> Response:
+    result = json.dumps(data)
+    result = result + "\n"
+    return Response(text=result, content_type="application/json")
