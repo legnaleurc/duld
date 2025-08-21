@@ -63,7 +63,7 @@ def get_completed(transmission: TransmissionData) -> list[Torrent]:
 
 
 def _get_root_items(torrent: Torrent) -> list[str]:
-    files = torrent.files()
+    files = torrent.get_files()
     common: set[str] = set()
 
     # find common path
