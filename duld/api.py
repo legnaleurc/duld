@@ -75,7 +75,7 @@ class TorrentsHandler(View):
                     torrent_id=t.id,
                 )
             )
-        result = json.dumps([_.id for _ in torrents])
+        result = [_.id for _ in torrents]
         return _json_response(result)
 
     async def _add_urls(self, urls: list[str]) -> Response:
