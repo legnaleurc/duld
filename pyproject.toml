@@ -26,6 +26,7 @@ transmission-rpc = "^4.1.2"
 wcpan-logging = "^2.0.2"
 dacite = "^1.8.0"
 wcpan-drive-sqlite = "^2.0.0"
+qbittorrent-api = "^2025.7.0"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.12.0"

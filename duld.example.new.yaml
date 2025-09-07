@@ -1,0 +1,62 @@
+# daemon listening host
+host: 127.0.0.1
+# daemon listening port
+port: 1234
+# the upload directory on remote drive
+upload_to: /tmp
+# the drive config
+drive_config_path: /path/to/drive/config.yaml
+# (optional) excluded files
+exclude:
+  # (optional) static filters in regexp
+  static:
+    - ^.*$
+  # (optional) dynamic filters from dfd
+  dynamic: http://dfd/api/v1/filters
+# daemon log file path, or null to output to stderr
+log_path: /tmp/duld.log
+
+# NEW: Multiple torrent clients configuration
+torrent_list:
+  - type: transmission
+    name: main_transmission  # optional identifier
+    host: localhost
+    port: 9091
+    # (optional)
+    username:
+    # (optional)
+    password:
+    # (optional) explicit downloaded dir
+    # If omitted, torrent download_dir will be used.
+    # Set this value if the download_dir of the torrent
+    # is not visible to the daemon.
+    download_dir:
+  
+  - type: qbittorrent
+    name: qbittorrent_client
+    host: localhost
+    port: 8080
+    username: admin
+    password: adminadmin
+    download_dir: /downloads
+
+# (optional) reserved disk space for torrents
+reserved_space_in_gb:
+  safe: 8
+  danger: 4
+# (optional) HaH path
+hah_path: /path/to/hah
+# (optional) DVD settings
+dvd:
+  # clears search cache after drive sync
+  caches_searches_url: http://dvd/api/v1/caches/searches
+  # (optional)
+  token:
+
+# BACKWARD COMPATIBILITY: Old transmission config still works
+# transmission:
+#   host: localhost
+#   port: 9091
+#   username:
+#   password:
+#   download_dir:

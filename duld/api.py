@@ -7,7 +7,7 @@ from aiohttp.web import Response, View
 from aiohttp.web_exceptions import HTTPBadRequest, HTTPInternalServerError
 
 from .hah import upload_finished_hah
-from .keys import CONTEXT, SCHEDULER, UPLOADER
+from .keys import CONTEXT, SCHEDULER, TORRENT_REGISTRY, UPLOADER
 from .links import upload_from_url
 from .torrent import add_urls, get_completed, upload_by_id
 
@@ -30,73 +30,109 @@ class TorrentsHandler(View):
         return await self._add_urls(payload["urls"])
 
     async def put(self):
-        ctx = self.request.app[CONTEXT]
-        if not ctx.transmission:
-            _L.error("no transmission")
+        torrent_registry = self.request.app[TORRENT_REGISTRY]
+        if not torrent_registry:
+            _L.error("no torrent registry")
             raise HTTPInternalServerError
 
+        client_name = self.request.match_info.get("client")
         torrent_id = self.request.match_info["torrent_id"]
+
+        if not client_name:
+            _L.error("no client name provided")
+            raise HTTPBadRequest
         if not torrent_id:
             _L.error("invalid torrent id")
             raise HTTPBadRequest
 
+        torrent_client = torrent_registry.get_client(client_name)
+        if not torrent_client:
+            _L.error(f"no torrent client found: {client_name}")
+            raise HTTPInternalServerError
+
+        ctx = self.request.app[CONTEXT]
         group = self.request.app[SCHEDULER]
         uploader = self.request.app[UPLOADER]
         group.create_task(
             upload_by_id(
                 uploader=uploader,
                 upload_to=PurePath(ctx.upload_to),
-                transmission=ctx.transmission,
-                torrent_id=int(torrent_id),
+                torrent_client=torrent_client,
+                torrent_id=torrent_id,
             )
         )
         return Response(status=204)
 
     async def _upload_completed(self) -> Response:
+        torrent_registry = self.request.app[TORRENT_REGISTRY]
+        if not torrent_registry:
+            _L.error("no torrent registry")
+            raise HTTPInternalServerError
+
         ctx = self.request.app[CONTEXT]
-        if not ctx.transmission:
-            _L.error("no transmission")
-            raise HTTPInternalServerError
-
-        try:
-            torrents = get_completed(ctx.transmission)
-        except Exception as e:
-            _L.error(f"transmission error: {e}, data: {ctx.transmission}")
-            raise HTTPInternalServerError
-
         group = self.request.app[SCHEDULER]
         uploader = self.request.app[UPLOADER]
-        for t in torrents:
-            group.create_task(
-                upload_by_id(
-                    uploader=uploader,
-                    upload_to=PurePath(ctx.upload_to),
-                    transmission=ctx.transmission,
-                    torrent_id=t.id,
+
+        all_torrents = []
+        clients = torrent_registry.get_all_clients()
+
+        for client_name, client in clients.items():
+            try:
+                torrents = get_completed(client)
+                for t in torrents:
+                    group.create_task(
+                        upload_by_id(
+                            uploader=uploader,
+                            upload_to=PurePath(ctx.upload_to),
+                            torrent_client=client,
+                            torrent_id=t.id,
+                        )
+                    )
+                all_torrents.extend(
+                    [{"id": t.id, "client": client_name} for t in torrents]
                 )
-            )
-        result = [_.id for _ in torrents]
-        return _json_response(result)
+            except Exception as e:
+                _L.error(f"error getting completed torrents from {client_name}: {e}")
+
+        return _json_response(all_torrents)
 
     async def _add_urls(self, urls: list[str]) -> Response:
-        ctx = self.request.app[CONTEXT]
-        if not ctx.transmission:
-            _L.error("no transmission")
+        torrent_registry = self.request.app[TORRENT_REGISTRY]
+        if not torrent_registry:
+            _L.error("no torrent registry")
             raise HTTPInternalServerError
 
-        torrent_dict = await add_urls(urls, transmission=ctx.transmission)
-        result: dict[str, dict[str, object] | None] = {
-            url: (
-                {
-                    "id": torrent.id,
-                    "name": torrent.name,
-                }
-                if torrent
-                else None
-            )
-            for url, torrent in torrent_dict.items()
-        }
-        return _json_response(result)
+        clients = torrent_registry.get_all_clients()
+        if not clients:
+            _L.error("no torrent clients available")
+            raise HTTPInternalServerError
+
+        # Add URLs to all clients
+        all_results: dict[str, dict[str, object] | None] = {}
+
+        for client_name, torrent_client in clients.items():
+            try:
+                torrent_dict = await add_urls(urls, torrent_client=torrent_client)
+                for url, torrent in torrent_dict.items():
+                    if url not in all_results:
+                        all_results[url] = {}
+
+                    if torrent:
+                        all_results[url][client_name] = {
+                            "id": torrent.id,
+                            "name": torrent.name,
+                        }
+                    else:
+                        all_results[url][client_name] = None
+            except Exception as e:
+                _L.error(f"Failed to add URLs to client {client_name}: {e}")
+                # Mark this client as failed for all URLs
+                for url in urls:
+                    if url not in all_results:
+                        all_results[url] = {}
+                    all_results[url][client_name] = None
+
+        return _json_response(all_results)
 
 
 class HaHHandler(View):

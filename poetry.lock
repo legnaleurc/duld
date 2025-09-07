@@ -605,6 +605,18 @@ files = [
 ]
 
 [[package]]
+name = "packaging"
+version = "25.0"
+description = "Core utilities for Python packages"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "packaging-25.0-py3-none-any.whl", hash = "sha256:29572ef2b1f17581046b3a2227d5c611fb25ec70ca1ba8554b24b0e69331a484"},
+    {file = "packaging-25.0.tar.gz", hash = "sha256:d443872c98d677bf60f6a1f2f8c1cb748e8fe762d2bf9d3148b5599295b0fc4f"},
+]
+
+[[package]]
 name = "propcache"
 version = "0.2.0"
 description = "Accelerated property cache"
@@ -804,6 +816,27 @@ files = [
     {file = "PyYAML-6.0.1-cp39-cp39-win_amd64.whl", hash = "sha256:510c9deebc5c0225e8c96813043e62b680ba2f9c50a08d3724c7f28a747d1486"},
     {file = "PyYAML-6.0.1.tar.gz", hash = "sha256:bfdf460b1736c775f2ba9f6a92bca30bc2095067b8a9d77876d1fad6cc3b4a43"},
 ]
+
+[[package]]
+name = "qbittorrent-api"
+version = "2025.7.0"
+description = "Python client for qBittorrent v4.1+ Web API."
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "qbittorrent_api-2025.7.0-py3-none-any.whl", hash = "sha256:6cd79af4757ec71a64e5216cbaa50bf2c436efea0d32b9a79585e0ec21e85ea9"},
+    {file = "qbittorrent_api-2025.7.0.tar.gz", hash = "sha256:f462f2817559ccaa4c6cdc12694a3153efacd50fa3285a425401ab30abc0de76"},
+]
+
+[package.dependencies]
+packaging = "*"
+requests = ">=2.16.0"
+urllib3 = ">=1.24.2"
+
+[package.extras]
+dev = ["build (==1.2.2.post1)", "coverage[toml] (==7.9.1)", "mypy (==1.16.1)", "pre-commit (==4.2.0)", "pytest (==8.4.1)", "tox (==4.27.0)", "twine (==6.1.0)", "types-requests (==2.32.4.20250611)"]
+docs = ["furo (==2024.8.6)", "sphinx (==8.2.1)", "sphinx-autobuild (==2024.10.3)", "sphinx-autodoc-typehints (==3.1.0)", "sphinx-copybutton (==0.5.2)", "sphinxcontrib-spelling (==8.0.1)"]
 
 [[package]]
 name = "requests"
@@ -1104,4 +1137,4 @@ propcache = ">=0.2.0"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "e30bc70b007ea02fc5f252f31c56ad920a83aaa246976c8224b16c2888a8ff04"
+content-hash = "75c40aa568361424d7e24d629d6298a5d295751291aca6896fafde99550d5bf8"

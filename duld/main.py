@@ -12,9 +12,9 @@ from wcpan.logging import ConfigBuilder
 from .api import HaHHandler, LinksHandler, TorrentsHandler
 from .drive import create_uploader
 from .hah import watch_finished_hah
-from .keys import CONTEXT, SCHEDULER, UPLOADER
+from .keys import CONTEXT, SCHEDULER, TORRENT_REGISTRY, UPLOADER
 from .settings import load_from_path
-from .torrent import watch_disk_space
+from .torrent import create_torrent_registry, watch_disk_space
 
 
 type _Runnable[T] = Coroutine[None, None, T]
@@ -54,15 +54,23 @@ class Daemon:
     async def _main(self) -> int:
         app = Application()
 
-        if self._cfg.transmission:
+        # Create torrent registry from configuration
+        torrent_registry = create_torrent_registry(self._cfg.torrent_list)
+
+        # Add torrent routes if we have any torrent clients
+        if torrent_registry.get_all_clients():
             app.router.add_view(r"/api/v1/torrents", TorrentsHandler)
-            app.router.add_view(r"/api/v1/torrents/{torrent_id:\d+}", TorrentsHandler)
+            app.router.add_view(
+                r"/api/v1/torrents/{client}/{torrent_id}", TorrentsHandler
+            )
+
         if self._cfg.hah_path:
             app.router.add_view(r"/api/v1/hah", HaHHandler)
         app.router.add_view(r"/api/v1/links", LinksHandler)
 
         async with AsyncExitStack() as stack:
             app[CONTEXT] = self._cfg
+            app[TORRENT_REGISTRY] = torrent_registry
 
             group = await stack.enter_async_context(TaskGroup())
             app[SCHEDULER] = group
@@ -89,12 +97,12 @@ class Daemon:
                     )
                 )
 
-            if self._cfg.transmission and self._cfg.reserved_space_in_gb:
+            if torrent_registry.get_all_clients() and self._cfg.reserved_space_in_gb:
                 await stack.enter_async_context(
                     _background(
                         group,
                         watch_disk_space(
-                            transmission=self._cfg.transmission,
+                            torrent_registry=torrent_registry,
                             disk_space=self._cfg.reserved_space_in_gb,
                         ),
                     )
