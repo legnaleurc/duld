@@ -22,6 +22,7 @@ RUN : \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml poetry.lock poetry.toml /app/
+ARG POETRY_INSTALLER_NO_BINARY=pymediainfo
 RUN poetry install --only=main --no-root
 
 
@@ -30,7 +31,7 @@ FROM base AS production
 RUN : \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-        7zip libmagic1t64 \
+        7zip libmagic1t64 libmediainfo0v5 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
