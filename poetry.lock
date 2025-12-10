@@ -134,7 +134,6 @@ files = [
 
 [package.dependencies]
 frozenlist = ">=1.1.0"
-typing-extensions = {version = ">=4.2", markers = "python_version < \"3.13\""}
 
 [[package]]
 name = "asyncinotify"
@@ -1104,5 +1103,5 @@ propcache = ">=0.2.0"
 
 [metadata]
 lock-version = "2.1"
-python-versions = "^3.12"
-content-hash = "da2bb58e0ee93e549934e2fd75652fa1a9a267ee3c25658ce32f0cf9e622945d"
+python-versions = "^3.13"
+content-hash = "a5db2227b5fc5b9a25ea77b506fe25ab2ffe7cc8fdd2cfc4bf8517bdf8bee4cc"
