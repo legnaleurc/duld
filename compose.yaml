@@ -13,13 +13,8 @@ services:
       - ${DULD_HAH_PATH:-/tmp}:/mnt/hah:rw
     ports:
       - "${DULD_HOST}:${DULD_PORT}:80"
-    environment:
-      POETRY_CONFIG_DIR: /tmp
-      POETRY_CACHE_DIR: /tmp
-      DULD_UID: ${DULD_UID}
-      DULD_GID: ${DULD_GID}
     logging:
       driver: journald
       options:
         tag: duld-duld
-    command: /app/scripts/start.sh
+    command: /app/.venv/bin/python3 -m duld --settings=/mnt/duld.yaml
