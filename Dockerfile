@@ -1,4 +1,4 @@
-FROM python:3.13-slim-trixie AS base
+FROM python:3.13-slim-trixie AS builder
 
 # env
 ENV POETRY_HOME=/opt/poetry
@@ -10,23 +10,11 @@ RUN $POETRY_HOME/bin/pip install poetry
 ENV PATH=$POETRY_HOME/bin:$PATH
 
 WORKDIR /app
-
-
-FROM base AS production-builder
-
-RUN : \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends \
-        build-essential \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
 COPY pyproject.toml poetry.lock poetry.toml /app/
 ARG POETRY_INSTALLER_NO_BINARY=pymediainfo
 RUN poetry install --only=main --no-root
 
-
-FROM base AS production
+FROM python:3.13-slim-trixie AS production
 
 RUN : \
     && apt-get update \
@@ -35,5 +23,6 @@ RUN : \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=production-builder /app/.venv /app/.venv
+WORKDIR /app
+COPY --from=builder /app/.venv /app/.venv
 COPY . /app
