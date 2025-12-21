@@ -1,11 +1,11 @@
 FROM python:3.13-slim-trixie AS builder
 
-RUN : \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends \
-        build-essential \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# RUN : \
+#     && apt-get update \
+#     && apt-get install -y --no-install-recommends \
+#         build-essential \
+#     && apt-get clean \
+#     && rm -rf /var/lib/apt/lists/*
 
 # env
 ENV POETRY_HOME=/opt/poetry
