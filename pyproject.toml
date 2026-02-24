@@ -7,29 +7,29 @@ readme = "README.md"
 authors = [
     {name = "Wei-Cheng Pan", email = "legnaleurc@gmail.com"}
 ]
-dynamic = ["dependencies", "requires-python"]
+requires-python = ">=3.13"
+dependencies = [
+    "PyYAML>=6.0.1,<7",
+    "aiohttp>=3.13.3,<4",
+    "wcpan-drive-cli>=3.8.1,<4",
+    "wcpan-drive-core>=4.2.0,<5",
+    "asyncinotify>=4.2.1,<5",
+    "wcpan-drive-google>=9.1.7,<10",
+    "wcpan-drive-crypt>=4.1.2,<5",
+    "transmission-rpc>=7.0.11,<8",
+    "wcpan-logging>=2.0.2,<3",
+    "dacite>=1.8.0,<2",
+    "wcpan-drive-sqlite>=2.0.0,<3",
+]
 
-[tool.poetry]
-requires-poetry = "^2.1"
-package-mode = false
+[dependency-groups]
+dev = [
+    "ruff>=0.12.0,<1",
+]
 
-[tool.poetry.dependencies]
-python = "^3.13"
-PyYAML = "^6.0.1"
-aiohttp = "^3.13.3"
-wcpan-drive-cli = "^3.8.1"
-wcpan-drive-core = "^4.2.0"
-asyncinotify = "^4.2.1"
-wcpan-drive-google = "^9.1.7"
-wcpan-drive-crypt = "^4.1.2"
-transmission-rpc = "^4.1.2"
-wcpan-logging = "^2.0.2"
-dacite = "^1.8.0"
-wcpan-drive-sqlite = "^2.0.0"
-
-[tool.poetry.group.dev.dependencies]
-ruff = "^0.12.0"
+[tool.uv]
+package = false
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"

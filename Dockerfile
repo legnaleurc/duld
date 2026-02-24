@@ -1,18 +1,11 @@
 FROM python:3.13-slim-trixie AS builder
 
-# env
-ENV POETRY_HOME=/opt/poetry
-
-# setup poetry
-RUN python3 -m venv $POETRY_HOME
-RUN $POETRY_HOME/bin/pip install poetry
-# add poetry to path
-ENV PATH=$POETRY_HOME/bin:$PATH
+# install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
 WORKDIR /app
-COPY pyproject.toml poetry.lock poetry.toml /app/
-ARG POETRY_INSTALLER_NO_BINARY=pymediainfo
-RUN poetry install --only=main --no-root
+COPY pyproject.toml uv.lock /app/
+RUN uv sync --frozen --no-dev --no-install-project
 
 FROM python:3.13-slim-trixie AS production
 
