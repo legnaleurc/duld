@@ -59,9 +59,9 @@ async def _upload(uploader: DriveUploader, src_path: Path, dst_path: PurePath) -
     with TemporaryDirectory() as tmp:
         work_path = Path(tmp)
 
-        compress_base_name, remote_name = _get_names_for_upload(src_path, work_path)
-
         try:
+            compress_base_name, remote_name = _get_names_for_upload(src_path, work_path)
+
             _L.info(f"compressing {src_path} to {work_path} ...")
             tmp_path = await compress_to_path(
                 src_path, work_path, base_name=compress_base_name
