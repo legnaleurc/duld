@@ -9,22 +9,21 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
-    "PyYAML>=6.0.1,<7",
-    "aiohttp>=3.13.3,<4",
-    "wcpan-drive-cli>=3.8.1,<4",
-    "wcpan-drive-core>=4.2.0,<5",
-    "asyncinotify>=4.2.1,<5",
-    "wcpan-drive-google>=9.1.7,<10",
-    "wcpan-drive-crypt>=4.1.2,<5",
-    "transmission-rpc>=7.0.11,<8",
-    "wcpan-logging>=2.0.2,<3",
-    "dacite>=1.8.0,<2",
-    "wcpan-drive-sqlite>=2.0.0,<3",
+    "PyYAML>=6.0.1,<7.0.0",
+    "aiohttp>=3.13.3,<4.0.0",
+    "wcpan-drive-cli>=4.0.2,<5.0.0",
+    "asyncinotify>=4.2.1,<5.0.0",
+    "wcpan-drive-google>=10.0.1,<11.0.0",
+    "wcpan-drive-crypt>=5.0.1,<6.0.0",
+    "transmission-rpc>=7.0.11,<8.0.0",
+    "wcpan-logging>=2.0.2,<3.0.0",
+    "dacite>=1.8.0,<2.0.0",
+    "wcpan-drive-sqlite>=3.0.0,<4.0.0",
 ]
 
 [dependency-groups]
 dev = [
-    "ruff>=0.12.0,<1",
+    "ruff>=0.15.6,<1",
 ]
 
 [tool.uv]
