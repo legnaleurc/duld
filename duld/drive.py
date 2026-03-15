@@ -226,7 +226,7 @@ class DriveUploader:
                 raise UploadError(f"{remote_path} has invalid hash")
 
             # check integrity
-            await self._verify_remote_file(local_path, remote_path, child_node.hash)
+            await self._verify_remote_file(local_path, remote_path, child_node)
             _L.info(f"{remote_path} already exists and is the same file")
             return
 
@@ -251,7 +251,7 @@ class DriveUploader:
         await self._verify_remote_file(
             local_path,
             remote_path,
-            child_node.hash,
+            child_node,
         )
         _L.info(f"finished {remote_path}")
 
@@ -259,26 +259,13 @@ class DriveUploader:
         self,
         local_path: Path,
         remote_path: PurePath,
-        remote_hash: str,
+        remote_node: Node,
     ) -> None:
-        local_hash = await get_file_hash(local_path, drive=self._drive, pool=self._pool)
-        if local_hash != remote_hash:
+        local_hash = await get_file_hash(local_path, drive=self._drive, pool=self._pool, node=remote_node)
+        if local_hash != remote_node.hash:
             raise UploadError(
-                f"(remote) {remote_path} has a different hash ({local_hash}, {remote_hash})"
+                f"(remote) {remote_path} has a different hash ({local_hash}, {remote_node.hash})"
             )
-
-    # used in exception handler, DO NOT throw another exception again
-    async def _try_resolve_name_confliction(self, node: Node, local_path: Path):
-        name = local_path.name
-        child = await self._drive.get_child_by_name(name, node)
-        if not child:
-            return True
-        try:
-            await self._drive.move(node, trashed=True)
-            return True
-        except Exception:
-            _L.exception(f"failed to resolve name confliction")
-        return False
 
     async def _ensure_node_exists(self, node: Node) -> None:
         while True:
