@@ -1,6 +1,7 @@
 import re
 from abc import ABCMeta, abstractmethod
 from collections.abc import Iterable
+from contextlib import asynccontextmanager
 from typing import TypedDict, override
 
 from aiohttp import ClientSession
@@ -23,19 +24,19 @@ class DfdClient(metaclass=ABCMeta):
         pass
 
 
-def create_dfd_client(
-    exclude_data: ExcludeData | None,
-    *,
-    session: ClientSession,
-) -> DfdClient:
+@asynccontextmanager
+async def create_dfd_client(exclude_data: ExcludeData | None):
     if not exclude_data:
-        return _StaticDfdClient(static=[])
+        yield _StaticDfdClient(static=[])
+        return
     static = _to_regex_list(exclude_data.static if exclude_data.static else [])
     if not exclude_data.dynamic:
-        return _StaticDfdClient(static=static)
-    return _DefaultDfdClient(
-        static=static, dynamic=exclude_data.dynamic, session=session
-    )
+        yield _StaticDfdClient(static=static)
+        return
+    async with ClientSession() as session:
+        yield _DefaultDfdClient(
+            static=static, dynamic=exclude_data.dynamic, session=session
+        )
 
 
 def should_exclude(name: str, exclude_list: FilterList) -> bool:

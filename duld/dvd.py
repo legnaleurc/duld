@@ -1,5 +1,10 @@
+import json
 from abc import ABCMeta, abstractmethod
-from typing import override
+from contextlib import asynccontextmanager
+from dataclasses import asdict
+from datetime import datetime
+from functools import partial
+from typing import Any, override
 
 from aiohttp import ClientSession
 from wcpan.drive.core.types import Node
@@ -13,10 +18,14 @@ class DvdClient(metaclass=ABCMeta):
         pass
 
 
-def create_dvd_client(dvd: DvdData | None, *, session: ClientSession) -> DvdClient:
+@asynccontextmanager
+async def create_dvd_client(dvd: DvdData | None):
     if not dvd:
-        return EmptyDvdClient()
-    return DefaultDvdClient(dvd, session=session)
+        yield EmptyDvdClient()
+        return
+    serializer = partial(json.dumps, cls=_NodeEncoder)
+    async with ClientSession(json_serialize=serializer) as session:
+        yield DefaultDvdClient(dvd, session=session)
 
 
 class EmptyDvdClient(DvdClient):
@@ -43,3 +52,21 @@ class DefaultDvdClient(DvdClient):
         if self._dvd.token:
             headers["Authorization"] = f"Token {self._dvd.token}"
         return headers
+
+
+class _NodeEncoder(json.JSONEncoder):
+    @override
+    def default(self, o: Any) -> Any:
+        match o:
+            case Node():
+                return {
+                    "__type__": "Node",
+                    "__value__": asdict(o),
+                }
+            case datetime():
+                return {
+                    "__type__": "datetime",
+                    "__value__": o.isoformat(),
+                }
+            case _:
+                return super().default(o)

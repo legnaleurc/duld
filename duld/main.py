@@ -4,13 +4,13 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from asyncio import Event, TaskGroup, get_running_loop
 from collections.abc import Coroutine
 from contextlib import AsyncExitStack, asynccontextmanager
-from pathlib import Path, PurePath
+from pathlib import Path
 
 from aiohttp.web import Application, AppRunner, TCPSite
 from wcpan.logging import ConfigBuilder
 
 from .api import HaHHandler, LinksHandler, TorrentsHandler
-from .drive import create_uploader
+from .drive import create_drive_uploader
 from .hah import watch_finished_hah
 from .keys import CONTEXT, SCHEDULER, UPLOADER
 from .settings import load_from_path
@@ -68,8 +68,8 @@ class Daemon:
             app[SCHEDULER] = group
 
             uploader = await stack.enter_async_context(
-                create_uploader(
-                    drive_config_path=self._cfg.drive_config_path,
+                create_drive_uploader(
+                    self._cfg.upload,
                     exclude_data=self._cfg.exclude,
                     dvd_data=self._cfg.dvd,
                 )
@@ -83,7 +83,6 @@ class Daemon:
                         watch_finished_hah(
                             hah_path=Path(self._cfg.hah_path),
                             uploader=uploader,
-                            upload_to=PurePath(self._cfg.upload_to),
                             group=group,
                         ),
                     )

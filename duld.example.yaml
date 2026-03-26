@@ -2,10 +2,14 @@
 host: 127.0.0.1
 # daemon listening port
 port: 1234
-# the upload directory on remote drive
-upload_to: /tmp
-# the drive config
-drive_config_path: /path/to/drive/config.yaml
+# upload backend settings
+upload:
+  type: drive
+  kwargs:
+    # the upload directory on remote drive
+    upload_to: /tmp
+    # the drive config
+    config_path: /path/to/drive/config.yaml
 # (optional) excluded files
 exclude:
   # (optional) static filters in regexp

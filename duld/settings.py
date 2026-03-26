@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any
 
 import dacite
 import yaml
@@ -32,11 +33,16 @@ class DvdData:
 
 
 @dataclass
+class UploadData:
+    type: str
+    kwargs: dict[str, Any] | None
+
+
+@dataclass
 class Data:
     host: str
     port: int
-    drive_config_path: str
-    upload_to: str
+    upload: UploadData
     log_path: str | None
     exclude: ExcludeData | None
     reserved_space_in_gb: DiskSpaceData | None

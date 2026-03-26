@@ -2,14 +2,14 @@ import logging
 import re
 import shutil
 from asyncio import TaskGroup
-from pathlib import Path, PurePath
+from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import cast
 
 from asyncinotify import Event, Mask, RecursiveWatcher
 
-from .drive import DriveUploader
 from .lib import compress_to_path, is_too_long_to_compress
+from .upload import Uploader
 
 
 _L = logging.getLogger(__name__)
@@ -20,8 +20,7 @@ _META_FILE_NAME = "galleryinfo.txt"
 async def watch_finished_hah(
     *,
     hah_path: Path,
-    uploader: DriveUploader,
-    upload_to: PurePath,
+    uploader: Uploader,
     group: TaskGroup,
 ) -> None:
     download_path = hah_path / "download"
@@ -34,11 +33,11 @@ async def watch_finished_hah(
             continue
         if path.name == _META_FILE_NAME:
             gallery_path = path.parent
-            group.create_task(_upload(uploader, gallery_path, upload_to))
+            group.create_task(_upload(uploader, gallery_path))
 
 
 def upload_finished_hah(
-    *, hah_path: Path, uploader: DriveUploader, upload_to: PurePath, group: TaskGroup
+    *, hah_path: Path, uploader: Uploader, group: TaskGroup
 ) -> list[Path]:
     download_path = hah_path / "download"
 
@@ -46,12 +45,12 @@ def upload_finished_hah(
     for candidate in download_path.iterdir():
         meta_path = candidate / _META_FILE_NAME
         if meta_path.is_file():
-            group.create_task(_upload(uploader, candidate, upload_to))
+            group.create_task(_upload(uploader, candidate))
             finished.append(candidate)
     return finished
 
 
-async def _upload(uploader: DriveUploader, src_path: Path, dst_path: PurePath) -> None:
+async def _upload(uploader: Uploader, src_path: Path) -> None:
     if not src_path.exists():
         _L.info(f"hah ignored deleted path: {src_path}")
         return
@@ -68,9 +67,9 @@ async def _upload(uploader: DriveUploader, src_path: Path, dst_path: PurePath) -
             )
 
             _L.info(f"hah upload {tmp_path}")
-            await uploader.upload_from_hah(dst_path, tmp_path, remote_name=remote_name)
+            await uploader.upload_from_hah(tmp_path, remote_name=remote_name)
         except Exception:
-            _L.exception(f"trying to upload {src_path} to {dst_path} but failed")
+            _L.exception(f"trying to upload {src_path} but failed")
             return
 
     # clean up

@@ -1,17 +1,9 @@
-import asyncio
-import json
 import logging
-from asyncio import Lock, as_completed
-from collections.abc import Awaitable
 from concurrent.futures import Executor
-from contextlib import AsyncExitStack, asynccontextmanager, contextmanager
-from dataclasses import asdict
-from datetime import datetime
-from functools import partial
+from contextlib import AsyncExitStack, asynccontextmanager
 from pathlib import Path, PurePath
-from typing import Any, override
+from typing import override
 
-from aiohttp import ClientSession
 from wcpan.drive.cli.lib import (
     create_drive_from_config,
     create_executor,
@@ -23,291 +15,137 @@ from wcpan.drive.core.exceptions import NodeNotFoundError
 from wcpan.drive.core.lib import dispatch_change, upload_file_from_local
 from wcpan.drive.core.types import Drive, Node
 
-from .dfd import DfdClient, FilterList, create_dfd_client, should_exclude
+from .dfd import create_dfd_client
 from .dvd import DvdClient, create_dvd_client
-from .processors import compress_context
-from .settings import DvdData, ExcludeData
+from .settings import DvdData, ExcludeData, UploadData
+from .upload import StorageBackend, Uploader, UploadError, create_uploader
 
 
-RETRY_TIMES = 3
 _L = logging.getLogger(__name__)
 
 
-class UploadError(Exception):
-    pass
-
-
-@asynccontextmanager
-async def create_uploader(
-    *,
-    drive_config_path: str,
-    exclude_data: ExcludeData | None,
-    dvd_data: DvdData | None,
-):
-    async with AsyncExitStack() as stack:
-        pool = stack.enter_context(create_executor())
-        path = Path(drive_config_path)
-        drive = await stack.enter_async_context(create_drive_from_config(path))
-        serializer = partial(json.dumps, cls=NodeEncoder)
-        curl = await stack.enter_async_context(ClientSession(json_serialize=serializer))
-        dfd_client = create_dfd_client(exclude_data, session=curl)
-        dvd_client = create_dvd_client(dvd_data, session=curl)
-        yield DriveUploader(
-            pool=pool,
-            drive=drive,
-            curl=curl,
-            dfd_client=dfd_client,
-            dvd_client=dvd_client,
-        )
-
-
-class DriveUploader:
+class DriveBackend(StorageBackend[Node]):
     def __init__(
         self,
         *,
         pool: Executor,
         drive: Drive,
-        curl: ClientSession,
-        dfd_client: DfdClient,
         dvd_client: DvdClient,
-    ):
+        upload_to: PurePath,
+    ) -> None:
         self._pool = pool
-        self._curl = curl
         self._drive = drive
-        self._dfd = dfd_client
         self._dvd = dvd_client
-        self._jobs = set[Path | int]()
-        self._sync_lock = Lock()
+        self._upload_to = upload_to
 
-    async def upload_from_hah(
-        self, remote_path: PurePath, local_path: Path, *, remote_name: str
-    ) -> None:
-        if local_path in self._jobs:
-            _L.warning(f"{local_path} is still uploading")
-            return
+    @override
+    async def get_root_folder(self) -> Node:
+        return await self._drive.get_node_by_path(self._upload_to)
 
-        with job_guard(self._jobs, local_path):
-            await self._sync()
-            node = await self._drive.get_node_by_path(remote_path)
-            await self._upload_file_retry(node, local_path, remote_name=remote_name)
-
-    async def upload_from_torrent(
-        self,
-        remote_path: PurePath,
-        torrent_id: int,
-        torrent_root: str,
-        root_items: list[str],
-    ) -> None:
-        if torrent_id in self._jobs:
-            _L.warning(f"{torrent_id} is still uploading")
-            return
-
-        filters = await self._dfd.fetch_filters()
-
-        with job_guard(self._jobs, torrent_id):
-            await self._sync()
-
-            node = await self._drive.get_node_by_path(remote_path)
-
-            # files/directories to be upload
-            src_list = (Path(torrent_root, _) for _ in root_items)
-
-            with compress_context() as compress_avif:
-                pending_list = as_completed((compress_avif(_) for _ in src_list))
-
-                async_list = (await _ for _ in pending_list)
-
-                async for item in async_list:
-                    await self._upload(node, item, filters=filters)
-
-    async def upload_from_path(self, remote_path: PurePath, local_path: Path) -> None:
-        with job_guard(self._jobs, local_path):
-            await self._sync()
-            node = await self._drive.get_node_by_path(remote_path)
-            await self._upload(node, local_path, filters=[])
-
-    async def _sync(self):
-        async with self._sync_lock:
-            await asyncio.sleep(1)
-
-            count = 0
-            nodes: list[Node] = []
-            async for change in self._drive.sync():
-                count += 1
-                dispatch_change(
-                    change,
-                    on_remove=lambda _: None,
-                    on_update=lambda _: nodes.append(_),
-                )
-
-            _L.info(f"sync {count}")
-
-            try:
-                await self._dvd.update_search_cache_by_nodes(nodes)
-            except Exception:
-                _L.exception("failed to update dvd search cache")
-
-    async def _upload(
-        self, node: Node, local_path: Path, *, filters: FilterList
-    ) -> None:
-        if should_exclude(local_path.name, filters):
-            _L.info(f"excluded {local_path}")
-            return
-
-        if not local_path.exists():
-            _L.warning(f"cannot upload non-exist path {local_path}")
-            return
-
-        if not local_path.is_dir():
-            await self._upload_file_retry(node, local_path, remote_name=local_path.name)
-            return
-
-        child_node = await self._upload_directory(node, local_path)
-
-        for child_path in local_path.iterdir():
-            await self._upload(child_node, child_path, filters=filters)
-
-    async def _upload_directory(self, node: Node, local_path: Path) -> Node:
-        assert self._drive
-
-        if node.is_trashed:
-            raise UploadError(f"{node.name} should not be trashed")
-
-        dir_name = local_path.name
-
-        # find or create remote directory
+    @override
+    async def get_child(self, name: str, parent: Node) -> Node | None:
         try:
-            child_node = await self._drive.get_child_by_name(dir_name, node)
+            return await self._drive.get_child_by_name(name, parent)
         except NodeNotFoundError:
-            # create if not exists
-            child_node = await self._drive.create_directory(dir_name, node)
+            return None
 
-        if child_node.is_trashed:
-            raise UploadError(f"{child_node.name} should not be trashed")
+    @override
+    async def create_folder(self, name: str, parent: Node) -> Node:
+        return await self._drive.create_directory(name, parent)
 
-        if not child_node.is_directory:
-            # should be a directory
-            raise UploadError(f"{child_node.name} should be a folder")
-
-        # Need to update local cache for the added folder.
-        # In theory we should pass remote path instead of doing this.
-        await self._ensure_node_exists(child_node)
-
-        return child_node
-
-    async def _upload_file_retry(
-        self, node: Node, local_path: Path, *, remote_name: str
-    ) -> None:
-        for _ in range(RETRY_TIMES):
-            try:
-                await self._upload_file(node, local_path, remote_name=remote_name)
-                return
-            except Exception:
-                _L.exception("retry upload file")
-            await self._sync()
-        raise UploadError(f"tried upload {RETRY_TIMES} times")
-
-    async def _upload_file(
-        self, node: Node, local_path: Path, *, remote_name: str
-    ) -> None:
-        remote_path = await self._drive.resolve_path(node)
-        remote_path = remote_path / remote_name
-
-        child_node = await _else_none(self._drive.get_child_by_name(remote_name, node))
-
-        if child_node:
-            if child_node.is_trashed:
-                raise UploadError(f"{remote_path} already exists but it is in trash")
-
-            if child_node.is_directory:
-                raise UploadError(f"{remote_path} already exists but it is a folder")
-
-            if not child_node.hash:
-                raise UploadError(f"{remote_path} has invalid hash")
-
-            # check integrity
-            await self._verify_remote_file(local_path, remote_path, child_node)
-            _L.info(f"{remote_path} already exists and is the same file")
-            return
-
+    @override
+    async def upload_file(self, local_path: Path, parent: Node, *, name: str) -> Node:
         mime_type = get_mime_type(local_path)
         media_info = get_media_info(local_path)
-        child_node = await upload_file_from_local(
+        child = await upload_file_from_local(
             self._drive,
             local_path,
-            node,
-            name=remote_name,
+            parent,
+            name=name,
             mime_type=mime_type,
             media_info=media_info,
         )
+        if not child:
+            raise UploadError(f"upload failed for {name}")
+        if not child.hash:
+            raise UploadError(f"{name} has invalid hash after upload")
+        return child
 
-        if not child_node:
-            raise UploadError(f"{remote_path} upload failed")
-
-        if not child_node.hash:
-            raise UploadError(f"{remote_path} has invalid hash")
-
-        # check integrity
-        await self._verify_remote_file(
-            local_path,
-            remote_path,
-            child_node,
-        )
-        _L.info(f"finished {remote_path}")
-
-    async def _verify_remote_file(
-        self,
-        local_path: Path,
-        remote_path: PurePath,
-        remote_node: Node,
+    @override
+    async def verify_file(
+        self, local_path: Path, entry: Node, remote_path: PurePath
     ) -> None:
-        local_hash = await get_file_hash(local_path, drive=self._drive, pool=self._pool, node=remote_node)
-        if local_hash != remote_node.hash:
+        if not entry.hash:
+            raise UploadError(f"{remote_path} has invalid hash")
+        local_hash = await get_file_hash(
+            local_path, drive=self._drive, pool=self._pool, node=entry
+        )
+        if local_hash != entry.hash:
             raise UploadError(
-                f"(remote) {remote_path} has a different hash ({local_hash}, {remote_node.hash})"
+                f"(remote) {remote_path} has a different hash ({local_hash}, {entry.hash})"
             )
 
-    async def _ensure_node_exists(self, node: Node) -> None:
+    @override
+    async def resolve_path(self, entry: Node) -> PurePath:
+        return await self._drive.resolve_path(entry)
+
+    @override
+    async def sync(self) -> None:
+        count = 0
+        nodes: list[Node] = []
+        async for change in self._drive.sync():
+            count += 1
+            dispatch_change(
+                change,
+                on_remove=lambda _: None,
+                on_update=lambda _: nodes.append(_),
+            )
+        _L.info(f"sync {count}")
+        try:
+            await self._dvd.update_search_cache_by_nodes(nodes)
+        except Exception:
+            _L.exception("failed to update dvd search cache")
+
+    @override
+    async def ensure_entry_exists(self, entry: Node) -> None:
         while True:
             try:
-                await self._drive.resolve_path(node)
+                await self._drive.resolve_path(entry)
                 break
             except NodeNotFoundError:
-                _L.info(f"not in cache")
+                _L.info("not in cache")
             except Exception:
-                _L.exception(f"error on updating local cache")
-            await self._sync()
+                _L.exception("error on updating local cache")
+            await self.sync()
 
-
-class NodeEncoder(json.JSONEncoder):
     @override
-    def default(self, o: Any) -> Any:
-        match o:
-            case Node():
-                return {
-                    "__type__": "Node",
-                    "__value__": asdict(o),
-                }
-            case datetime():
-                return {
-                    "__type__": "datetime",
-                    "__value__": o.isoformat(),
-                }
-            case _:
-                return super().default(o)
+    async def is_trashed(self, entry: Node) -> bool:
+        return entry.is_trashed
+
+    @override
+    async def is_directory(self, entry: Node) -> bool:
+        return entry.is_directory
 
 
-@contextmanager
-def job_guard[T](set_: set[T], token: T):
-    set_.add(token)
-    try:
-        yield
-    finally:
-        set_.discard(token)
+@asynccontextmanager
+async def create_drive_uploader(
+    upload_data: UploadData,
+    *,
+    exclude_data: ExcludeData | None,
+    dvd_data: DvdData | None,
+):
+    kwargs = upload_data.kwargs or {}
+    config_path = kwargs["config_path"]
+    upload_to = PurePath(kwargs["upload_to"])
 
-
-async def _else_none(aw: Awaitable[Node]) -> Node | None:
-    try:
-        return await aw
-    except NodeNotFoundError:
-        return None
+    async with AsyncExitStack() as stack:
+        pool = stack.enter_context(create_executor())
+        path = Path(config_path)
+        drive = await stack.enter_async_context(create_drive_from_config(path))
+        dfd_client = await stack.enter_async_context(create_dfd_client(exclude_data))
+        dvd_client = await stack.enter_async_context(create_dvd_client(dvd_data))
+        backend = DriveBackend(
+            pool=pool, drive=drive, dvd_client=dvd_client, upload_to=upload_to
+        )
+        uploader: Uploader = create_uploader(backend=backend, dfd_client=dfd_client)
+        yield uploader

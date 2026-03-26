@@ -1,12 +1,11 @@
 import asyncio
 import logging
 import os.path
-from pathlib import PurePath
 
 from transmission_rpc import Client, Torrent, TransmissionError
 
-from .drive import DriveUploader
 from .settings import DiskSpaceData, TransmissionData
+from .upload import Uploader
 
 
 _L = logging.getLogger(__name__)
@@ -14,8 +13,7 @@ _L = logging.getLogger(__name__)
 
 async def upload_by_id(
     *,
-    uploader: DriveUploader,
-    upload_to: PurePath,
+    uploader: Uploader,
     transmission: TransmissionData,
     torrent_id: int,
 ) -> None:
@@ -43,9 +41,7 @@ async def upload_by_id(
 
     # upload files to Cloud Drive
     try:
-        await uploader.upload_from_torrent(
-            upload_to, torrent_id, torrent_root, root_items
-        )
+        await uploader.upload_from_torrent(torrent_id, torrent_root, root_items)
     except Exception:
         _L.exception("upload failed")
         _L.error(f"retry url: /api/v1/torrents/{torrent_id}")

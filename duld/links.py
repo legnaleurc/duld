@@ -1,18 +1,16 @@
 from logging import getLogger
-from pathlib import Path, PurePath
+from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from aiohttp import ClientSession
 
-from .drive import DriveUploader
+from .upload import Uploader
 
 
 _L = getLogger(__name__)
 
 
-async def upload_from_url(
-    url: str, name: str | None, /, *, upload_to: PurePath, uploader: DriveUploader
-) -> None:
+async def upload_from_url(url: str, name: str | None, /, *, uploader: Uploader) -> None:
     if not name:
         name = url.split("/")[-1]
     with TemporaryDirectory() as tmpdir:
@@ -22,4 +20,4 @@ async def upload_from_url(
             async with session.get(url) as resp:
                 with path.open("wb") as f:
                     f.write(await resp.read())
-        await uploader.upload_from_path(upload_to, path)
+        await uploader.upload_from_path(path)

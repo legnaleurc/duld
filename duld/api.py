@@ -1,6 +1,6 @@
 import json
 import logging
-from pathlib import Path, PurePath
+from pathlib import Path
 from typing import NotRequired, TypedDict
 
 from aiohttp.web import Response, View
@@ -45,7 +45,6 @@ class TorrentsHandler(View):
         group.create_task(
             upload_by_id(
                 uploader=uploader,
-                upload_to=PurePath(ctx.upload_to),
                 transmission=ctx.transmission,
                 torrent_id=int(torrent_id),
             )
@@ -70,7 +69,6 @@ class TorrentsHandler(View):
             group.create_task(
                 upload_by_id(
                     uploader=uploader,
-                    upload_to=PurePath(ctx.upload_to),
                     transmission=ctx.transmission,
                     torrent_id=t.id,
                 )
@@ -111,7 +109,6 @@ class HaHHandler(View):
         folders = upload_finished_hah(
             hah_path=Path(ctx.hah_path),
             uploader=uploader,
-            upload_to=PurePath(ctx.upload_to),
             group=group,
         )
         finished = [folder.name for folder in folders]
@@ -138,17 +135,9 @@ class LinksHandler(View):
         if not url:
             raise HTTPBadRequest
 
-        ctx = self.request.app[CONTEXT]
         group = self.request.app[SCHEDULER]
         uploader = self.request.app[UPLOADER]
-        group.create_task(
-            upload_from_url(
-                url,
-                name,
-                upload_to=PurePath(ctx.upload_to),
-                uploader=uploader,
-            )
-        )
+        group.create_task(upload_from_url(url, name, uploader=uploader))
         return Response(status=204)
 
 
