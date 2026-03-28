@@ -652,11 +652,11 @@ wheels = [
 
 [[package]]
 name = "wcpan-drive-core"
-version = "5.0.6"
+version = "5.0.7"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/4b/37/1943a48a7f68291ebf7b3d7ecd6d6711c9280c1a36656bfb09466325dc17/wcpan_drive_core-5.0.6.tar.gz", hash = "sha256:55b6ffce7ef4588decfe1491aef3e4ec7dfdf5a5e08550d8c1e168322441eafc", size = 35652, upload-time = "2026-03-15T06:58:54.71Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3c/c1/e6ceca68b58d8312f76cff21944ca3d78d048edb80d677fb928518cf82f7/wcpan_drive_core-5.0.7.tar.gz", hash = "sha256:98ecd9a0a87b1dc5574a4ab1ec2482df17bf95b20e6981d47d410a64b04e170f", size = 35661, upload-time = "2026-03-17T05:24:02.779Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7b/f8/4f945bc9d4dd1290ccebbcdd55026e2af3074d509babb3c71501844a5340/wcpan_drive_core-5.0.6-py3-none-any.whl", hash = "sha256:fbd91b2fc961b9332762b7181da2d36a6763e4fe1b57a7e1f67c26a169bb7286", size = 32470, upload-time = "2026-03-15T06:58:53.171Z" },
+    { url = "https://files.pythonhosted.org/packages/49/21/8fe3ae592d2dab1fe9ab62ab137f092ed969e8009de10aaccbcb0eafa588/wcpan_drive_core-5.0.7-py3-none-any.whl", hash = "sha256:ae6245eb9952fa7d8101d609f08ee95312b7dc08dcc5e81bf7e2d3f90b56814e", size = 32480, upload-time = "2026-03-17T05:24:01.242Z" },
 ]
 
 [[package]]
