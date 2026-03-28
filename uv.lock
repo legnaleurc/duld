@@ -182,6 +182,7 @@ dependencies = [
     { name = "wcpan-drive-crypt" },
     { name = "wcpan-drive-google" },
     { name = "wcpan-drive-sqlite" },
+    { name = "wcpan-drive-synology" },
     { name = "wcpan-logging" },
 ]
 
@@ -201,6 +202,7 @@ requires-dist = [
     { name = "wcpan-drive-crypt", specifier = ">=5.0.1,<6.0.0" },
     { name = "wcpan-drive-google", specifier = ">=10.0.1,<11.0.0" },
     { name = "wcpan-drive-sqlite", specifier = ">=3.0.0,<4.0.0" },
+    { name = "wcpan-drive-synology", specifier = ">=1.0.1,<2.0.0" },
     { name = "wcpan-logging", specifier = ">=2.0.2,<3.0.0" },
 ]
 
@@ -693,6 +695,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/8b/28/3b977d8eef765f488022bb45ef431d9e5a953623ce34fb8295ced63f9f61/wcpan_drive_sqlite-3.0.0.tar.gz", hash = "sha256:c0fc512713b20c4ed8ce77c946e72c76de59724922c7cdb788e140289365a38f", size = 12854, upload-time = "2026-03-14T12:48:11.113Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/bd/b6/6702b0306bb29af1de1bb38fdc68695ee26d282a443135beb3fedefa4f44/wcpan_drive_sqlite-3.0.0-py3-none-any.whl", hash = "sha256:8af197e7eb3cf302fc8fe0d52c1542365247ff717bb2f662ab19afcd8b9245a0", size = 9459, upload-time = "2026-03-14T12:48:12.11Z" },
+]
+
+[[package]]
+name = "wcpan-drive-synology"
+version = "1.0.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "wcpan-drive-core" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/77/eb/8f3b9ca90f24b151b23480b0c20d97c1b1e3c98088e2ecd7301f368871df/wcpan_drive_synology-1.0.1.tar.gz", hash = "sha256:736ee6fe7b5b289803fae65c8e5c97d0f2f1b37cdb669d34eff068ef4a656976", size = 60404, upload-time = "2026-03-28T09:40:06.46Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d2/bc/e81ce5ddd0389896e671635f5a4b388146ac91d2394652581e7717409032/wcpan_drive_synology-1.0.1-py3-none-any.whl", hash = "sha256:f4875ec0a1e4a353dfd8ffc3e597f066d484c5650401dc5831c4c83c7552dae9", size = 22151, upload-time = "2026-03-28T09:40:04.841Z" },
 ]
 
 [[package]]
