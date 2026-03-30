@@ -10,6 +10,12 @@ upload:
     upload_to: /tmp
     # the drive config
     config_path: /path/to/drive/config.yaml
+    # (optional) DVD settings
+    dvd:
+      # clears search cache after drive sync
+      caches_searches_url: http://dvd/api/v1/caches/searches
+      # (optional)
+      token:
 # (optional) excluded files
 exclude:
   # (optional) static filters in regexp
@@ -38,9 +44,3 @@ reserved_space_in_gb:
   danger: 4
 # (optional) HaH path
 hah_path: /path/to/hah
-# (optional) DVD settings
-dvd:
-  # clears search cache after drive sync
-  caches_searches_url: http://dvd/api/v1/caches/searches
-  # (optional)
-  token:

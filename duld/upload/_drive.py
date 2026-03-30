@@ -5,6 +5,7 @@ from contextlib import AsyncExitStack, asynccontextmanager
 from pathlib import Path, PurePath
 from typing import override
 
+import dacite
 from wcpan.drive.cli.lib import (
     create_drive_from_config,
     create_executor,
@@ -131,14 +132,12 @@ class DriveBackend(StorageBackend[Node]):
 
 
 @asynccontextmanager
-async def create_drive_backend(
-    upload_data: UploadData,
-    *,
-    dvd_data: DvdData | None,
-):
+async def create_drive_backend(upload_data: UploadData):
     kwargs = upload_data.kwargs or {}
     config_path = kwargs["config_path"]
     upload_to = PurePath(kwargs["upload_to"])
+    raw_dvd = kwargs.get("dvd")
+    dvd_data = dacite.from_dict(DvdData, raw_dvd) if raw_dvd else None
 
     async with AsyncExitStack() as stack:
         pool = stack.enter_context(create_executor())
