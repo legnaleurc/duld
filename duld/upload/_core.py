@@ -6,8 +6,8 @@ from contextlib import contextmanager
 from pathlib import Path, PurePath
 from typing import Protocol
 
-from .dfd import DfdClient, FilterList, should_exclude
-from .processors import compress_context
+from ..dfd import DfdClient, FilterList, should_exclude
+from ..processors import compress_context
 
 
 RETRY_TIMES = 3

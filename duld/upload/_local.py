@@ -1,11 +1,9 @@
 import shutil
-from contextlib import asynccontextmanager
 from pathlib import Path, PurePath
 from typing import override
 
-from .dfd import create_dfd_client
-from .settings import ExcludeData, UploadData
-from .upload import StorageBackend, UploadError, Uploader, create_uploader
+from ..settings import UploadData
+from ._core import StorageBackend, UploadError
 
 
 class LocalBackend(StorageBackend[Path]):
@@ -66,16 +64,7 @@ class LocalBackend(StorageBackend[Path]):
         return entry.is_dir()
 
 
-@asynccontextmanager
-async def create_local_uploader(
-    upload_data: UploadData,
-    *,
-    exclude_data: ExcludeData | None,
-):
+def create_local_backend(upload_data: UploadData) -> LocalBackend:
     kwargs = upload_data.kwargs or {}
     upload_to = Path(kwargs["upload_to"])
-
-    async with create_dfd_client(exclude_data) as dfd_client:
-        backend = LocalBackend(upload_to=upload_to)
-        uploader: Uploader = create_uploader(backend=backend, dfd_client=dfd_client)
-        yield uploader
+    return LocalBackend(upload_to=upload_to)

@@ -10,12 +10,11 @@ from aiohttp.web import Application, AppRunner, TCPSite
 from wcpan.logging import ConfigBuilder
 
 from .api import HaHHandler, LinksHandler, TorrentsHandler
-from .drive import create_drive_uploader
 from .hah import watch_finished_hah
 from .keys import CONTEXT, SCHEDULER, UPLOADER
-from .local import create_local_uploader
-from .settings import Data, load_from_path
+from .settings import load_from_path
 from .torrent import watch_disk_space
+from .upload import create_uploader
 
 
 type _Runnable[T] = Coroutine[None, None, T]
@@ -68,9 +67,7 @@ class Daemon:
             group = await stack.enter_async_context(TaskGroup())
             app[SCHEDULER] = group
 
-            uploader = await stack.enter_async_context(
-                _create_uploader(self._cfg)
-            )
+            uploader = await stack.enter_async_context(create_uploader(self._cfg))
             app[UPLOADER] = uploader
 
             if self._cfg.hah_path:
@@ -133,23 +130,6 @@ async def _background[T](group: TaskGroup, c: _Runnable[T]):
         yield
     finally:
         task.cancel()
-
-
-@asynccontextmanager
-async def _create_uploader(cfg: Data):
-    match cfg.upload.type:
-        case "drive":
-            async with create_drive_uploader(
-                cfg.upload, exclude_data=cfg.exclude, dvd_data=cfg.dvd
-            ) as u:
-                yield u
-        case "local":
-            async with create_local_uploader(
-                cfg.upload, exclude_data=cfg.exclude
-            ) as u:
-                yield u
-        case _:
-            raise ValueError(f"unknown upload type: {cfg.upload.type}")
 
 
 def _parse_args(args: list[str]):
