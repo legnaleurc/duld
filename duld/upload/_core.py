@@ -1,7 +1,6 @@
-import asyncio
 import logging
 from abc import ABCMeta, abstractmethod
-from asyncio import Lock, as_completed
+from asyncio import as_completed
 from contextlib import contextmanager
 from pathlib import Path, PurePath
 from typing import Protocol
@@ -78,7 +77,6 @@ class _DefaultUploader[E]:
         self._backend = backend
         self._dfd = dfd_client
         self._jobs = set[Path | int]()
-        self._sync_lock = Lock()
 
     async def upload_from_hah(self, local_path: Path, *, remote_name: str) -> None:
         if local_path in self._jobs:
@@ -86,7 +84,7 @@ class _DefaultUploader[E]:
             return
 
         with job_guard(self._jobs, local_path):
-            await self._sync()
+            await self._backend.sync()
             entry = await self._backend.get_root_folder()
             await self._upload_file_retry(entry, local_path, remote_name=remote_name)
 
@@ -103,7 +101,7 @@ class _DefaultUploader[E]:
         filters = await self._dfd.fetch_filters()
 
         with job_guard(self._jobs, torrent_id):
-            await self._sync()
+            await self._backend.sync()
 
             entry = await self._backend.get_root_folder()
 
@@ -119,14 +117,9 @@ class _DefaultUploader[E]:
 
     async def upload_from_path(self, local_path: Path) -> None:
         with job_guard(self._jobs, local_path):
-            await self._sync()
+            await self._backend.sync()
             entry = await self._backend.get_root_folder()
             await self._upload(entry, local_path, filters=[])
-
-    async def _sync(self) -> None:
-        async with self._sync_lock:
-            await asyncio.sleep(1)
-            await self._backend.sync()
 
     async def _upload(self, entry: E, local_path: Path, *, filters: FilterList) -> None:
         if should_exclude(local_path.name, filters):
@@ -177,7 +170,7 @@ class _DefaultUploader[E]:
                 return
             except Exception:
                 _L.exception("retry upload file")
-            await self._sync()
+            await self._backend.sync()
         raise UploadError(f"tried upload {RETRY_TIMES} times")
 
     async def _upload_file(
