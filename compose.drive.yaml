@@ -1,0 +1,6 @@
+services:
+  duld:
+    volumes:
+      - ${DULD_DRIVE_FILE}:/mnt/drive.yaml:ro
+      - ${DULD_DRIVE_CONFIG_PATH}:/mnt/config:ro
+      - ${DULD_DRIVE_DATA_PATH}:/mnt/data:rw

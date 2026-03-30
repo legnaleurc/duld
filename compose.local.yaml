@@ -1,0 +1,4 @@
+services:
+  duld:
+    volumes:
+      - ${DULD_LOCAL_PATH}:/mnt/local:rw
