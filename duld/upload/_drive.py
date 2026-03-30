@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from concurrent.futures import Executor
 from contextlib import AsyncExitStack, asynccontextmanager
@@ -36,6 +37,7 @@ class DriveBackend(StorageBackend[Node]):
         self._drive = drive
         self._dvd = dvd_client
         self._upload_to = upload_to
+        self._sync_lock = asyncio.Lock()
 
     @override
     async def get_root_folder(self) -> Node:
@@ -90,20 +92,22 @@ class DriveBackend(StorageBackend[Node]):
 
     @override
     async def sync(self) -> None:
-        count = 0
-        nodes: list[Node] = []
-        async for change in self._drive.sync():
-            count += 1
-            dispatch_change(
-                change,
-                on_remove=lambda _: None,
-                on_update=lambda _: nodes.append(_),
-            )
-        _L.info(f"sync {count}")
-        try:
-            await self._dvd.update_search_cache_by_nodes(nodes)
-        except Exception:
-            _L.exception("failed to update dvd search cache")
+        async with self._sync_lock:
+            await asyncio.sleep(1)
+            count = 0
+            nodes: list[Node] = []
+            async for change in self._drive.sync():
+                count += 1
+                dispatch_change(
+                    change,
+                    on_remove=lambda _: None,
+                    on_update=lambda _: nodes.append(_),
+                )
+            _L.info(f"sync {count}")
+            try:
+                await self._dvd.update_search_cache_by_nodes(nodes)
+            except Exception:
+                _L.exception("failed to update dvd search cache")
 
     @override
     async def ensure_entry_exists(self, entry: Node) -> None:
