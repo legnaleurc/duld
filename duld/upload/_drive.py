@@ -15,10 +15,9 @@ from wcpan.drive.core.exceptions import NodeNotFoundError
 from wcpan.drive.core.lib import dispatch_change, upload_file_from_local
 from wcpan.drive.core.types import Drive, Node
 
-from .dfd import create_dfd_client
-from .dvd import DvdClient, create_dvd_client
-from .settings import DvdData, ExcludeData, UploadData
-from .upload import StorageBackend, Uploader, UploadError, create_uploader
+from ..dvd import DvdClient, create_dvd_client
+from ..settings import DvdData, UploadData
+from ._core import StorageBackend, UploadError
 
 
 _L = logging.getLogger(__name__)
@@ -128,10 +127,9 @@ class DriveBackend(StorageBackend[Node]):
 
 
 @asynccontextmanager
-async def create_drive_uploader(
+async def create_drive_backend(
     upload_data: UploadData,
     *,
-    exclude_data: ExcludeData | None,
     dvd_data: DvdData | None,
 ):
     kwargs = upload_data.kwargs or {}
@@ -140,12 +138,10 @@ async def create_drive_uploader(
 
     async with AsyncExitStack() as stack:
         pool = stack.enter_context(create_executor())
-        path = Path(config_path)
-        drive = await stack.enter_async_context(create_drive_from_config(path))
-        dfd_client = await stack.enter_async_context(create_dfd_client(exclude_data))
+        drive = await stack.enter_async_context(
+            create_drive_from_config(Path(config_path))
+        )
         dvd_client = await stack.enter_async_context(create_dvd_client(dvd_data))
-        backend = DriveBackend(
+        yield DriveBackend(
             pool=pool, drive=drive, dvd_client=dvd_client, upload_to=upload_to
         )
-        uploader: Uploader = create_uploader(backend=backend, dfd_client=dfd_client)
-        yield uploader
