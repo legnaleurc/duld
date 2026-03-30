@@ -16,9 +16,7 @@ async def create_uploader(cfg: Data):
             case "drive":
                 from ._drive import create_drive_backend
 
-                async with create_drive_backend(
-                    cfg.upload, dvd_data=cfg.dvd
-                ) as backend:
+                async with create_drive_backend(cfg.upload) as backend:
                     yield _make_uploader(backend=backend, dfd_client=dfd_client)
             case "local":
                 from ._local import create_local_backend

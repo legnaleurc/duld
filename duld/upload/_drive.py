@@ -16,8 +16,7 @@ from wcpan.drive.core.exceptions import NodeNotFoundError
 from wcpan.drive.core.lib import dispatch_change, upload_file_from_local
 from wcpan.drive.core.types import Drive, Node
 
-from ..dvd import DvdClient, create_dvd_client
-from ..settings import DvdData, UploadData
+from ..settings import UploadData
 from ._core import StorageBackend, UploadError
 
 
@@ -30,12 +29,10 @@ class DriveBackend(StorageBackend[Node]):
         *,
         pool: Executor,
         drive: Drive,
-        dvd_client: DvdClient,
         upload_to: PurePath,
     ) -> None:
         self._pool = pool
         self._drive = drive
-        self._dvd = dvd_client
         self._upload_to = upload_to
         self._sync_lock = asyncio.Lock()
 
@@ -95,19 +92,14 @@ class DriveBackend(StorageBackend[Node]):
         async with self._sync_lock:
             await asyncio.sleep(1)
             count = 0
-            nodes: list[Node] = []
             async for change in self._drive.sync():
                 count += 1
                 dispatch_change(
                     change,
                     on_remove=lambda _: None,
-                    on_update=lambda _: nodes.append(_),
+                    on_update=lambda _: None,
                 )
             _L.info(f"sync {count}")
-            try:
-                await self._dvd.update_search_cache_by_nodes(nodes)
-            except Exception:
-                _L.exception("failed to update dvd search cache")
 
     @override
     async def ensure_entry_exists(self, entry: Node) -> None:
@@ -131,11 +123,7 @@ class DriveBackend(StorageBackend[Node]):
 
 
 @asynccontextmanager
-async def create_drive_backend(
-    upload_data: UploadData,
-    *,
-    dvd_data: DvdData | None,
-):
+async def create_drive_backend(upload_data: UploadData):
     kwargs = upload_data.kwargs or {}
     config_path = kwargs["config_path"]
     upload_to = PurePath(kwargs["upload_to"])
@@ -145,7 +133,4 @@ async def create_drive_backend(
         drive = await stack.enter_async_context(
             create_drive_from_config(Path(config_path))
         )
-        dvd_client = await stack.enter_async_context(create_dvd_client(dvd_data))
-        yield DriveBackend(
-            pool=pool, drive=drive, dvd_client=dvd_client, upload_to=upload_to
-        )
+        yield DriveBackend(pool=pool, drive=drive, upload_to=upload_to)

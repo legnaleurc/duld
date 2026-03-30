@@ -27,12 +27,6 @@ class TransmissionData:
 
 
 @dataclass
-class DvdData:
-    caches_searches_url: str
-    token: str | None
-
-
-@dataclass
 class UploadData:
     type: str
     kwargs: dict[str, Any] | None
@@ -48,7 +42,6 @@ class Data:
     reserved_space_in_gb: DiskSpaceData | None
     transmission: TransmissionData | None
     hah_path: str | None
-    dvd: DvdData | None
 
 
 def load_from_path(path: str) -> Data:

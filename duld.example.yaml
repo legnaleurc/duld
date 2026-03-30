@@ -38,9 +38,3 @@ reserved_space_in_gb:
   danger: 4
 # (optional) HaH path
 hah_path: /path/to/hah
-# (optional) DVD settings
-dvd:
-  # clears search cache after drive sync
-  caches_searches_url: http://dvd/api/v1/caches/searches
-  # (optional)
-  token:
