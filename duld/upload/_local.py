@@ -51,7 +51,7 @@ class LocalBackend(StorageBackend[Path]):
         pass
 
     @override
-    async def ensure_entry_exists(self, entry: Path, name: str, parent: Path) -> None:
+    async def ensure_entry_exists(self, entry: Path) -> None:
         if not entry.exists():
             raise UploadError(f"{entry} does not exist")
 

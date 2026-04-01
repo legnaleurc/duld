@@ -111,13 +111,13 @@ class DriveBackend(StorageBackend[Node]):
                 _L.exception("failed to update dvd search cache")
 
     @override
-    async def ensure_entry_exists(self, entry: Node, name: str, parent: Node) -> None:
+    async def ensure_entry_exists(self, entry: Node) -> None:
         while True:
             try:
-                await self._drive.get_child_by_name(name, parent)
+                await self._drive.resolve_path(entry)
                 break
             except NodeNotFoundError:
-                _L.info("not in cache yet, will retry after sync")
+                _L.info("not in cache")
             except Exception:
                 _L.exception("error on updating local cache")
             await self.sync()

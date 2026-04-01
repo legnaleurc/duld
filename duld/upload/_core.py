@@ -42,7 +42,7 @@ class StorageBackend[E](metaclass=ABCMeta):
     async def sync(self) -> None: ...
 
     @abstractmethod
-    async def ensure_entry_exists(self, entry: E, name: str, parent: E) -> None: ...
+    async def ensure_entry_exists(self, entry: E) -> None: ...
 
     @abstractmethod
     async def is_trashed(self, entry: E) -> bool: ...
@@ -157,14 +157,7 @@ class _DefaultUploader[E]:
         if not await self._backend.is_directory(child):
             raise UploadError(f"{dir_name} should be a folder")
 
-        await self._backend.ensure_entry_exists(child, dir_name, entry)
-
-        # Re-fetch to get the canonical node from the snapshot service.
-        # create_folder may return a node with a different ID format than what
-        # the snapshot uses (e.g., SHA-256 path IDs vs UUID from feed).
-        refreshed = await self._backend.get_child(dir_name, entry)
-        if refreshed is not None:
-            child = refreshed
+        await self._backend.ensure_entry_exists(child)
 
         return child
 
