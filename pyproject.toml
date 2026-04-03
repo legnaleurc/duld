@@ -19,7 +19,7 @@ dependencies = [
     "wcpan-logging>=2.0.2,<3.0.0",
     "dacite>=1.8.0,<2.0.0",
     "wcpan-drive-sqlite>=3.0.0,<4.0.0",
-    "wcpan-drive-synology==2.0.0a3",
+    "wcpan-drive-synology==2.0.0a4",
 ]
 
 [dependency-groups]
