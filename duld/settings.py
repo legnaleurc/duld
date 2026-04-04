@@ -48,10 +48,13 @@ class Data:
     reserved_space_in_gb: DiskSpaceData | None
     transmission: TransmissionData | None
     hah_path: str | None
+    max_jobs: int | None
 
 
 def load_from_path(path: str) -> Data:
     with open(path, mode="r", encoding="utf-8") as fin:
         raw_data = yaml.safe_load(fin)
         data = dacite.from_dict(Data, raw_data)
+        if data.max_jobs is not None and data.max_jobs < 0:
+            raise ValueError(f"max_jobs must be >= 0, got {data.max_jobs}")
         return data

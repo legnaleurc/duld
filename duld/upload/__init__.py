@@ -17,11 +17,19 @@ async def create_uploader(cfg: Data):
                 from ._drive import create_drive_backend
 
                 async with create_drive_backend(cfg.upload) as backend:
-                    yield _make_uploader(backend=backend, dfd_client=dfd_client)
+                    yield _make_uploader(
+                        backend=backend,
+                        dfd_client=dfd_client,
+                        max_jobs=cfg.max_jobs or 0,
+                    )
             case "local":
                 from ._local import create_local_backend
 
                 backend = create_local_backend(cfg.upload)
-                yield _make_uploader(backend=backend, dfd_client=dfd_client)
+                yield _make_uploader(
+                    backend=backend,
+                    dfd_client=dfd_client,
+                    max_jobs=cfg.max_jobs or 0,
+                )
             case _:
                 raise ValueError(f"unknown upload type: {cfg.upload.type}")
