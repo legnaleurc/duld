@@ -38,3 +38,5 @@ reserved_space_in_gb:
   danger: 4
 # (optional) HaH path
 hah_path: /path/to/hah
+# (optional) max concurrent upload jobs, 0 or omit for unlimited
+max_jobs: 0

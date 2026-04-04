@@ -1,7 +1,8 @@
+import asyncio
 import logging
 from abc import ABCMeta, abstractmethod
 from asyncio import as_completed
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from pathlib import Path, PurePath
 from typing import Protocol
 
@@ -62,9 +63,15 @@ class Uploader(Protocol):
 
 
 def create_uploader[E](
-    *, backend: StorageBackend[E], dfd_client: DfdClient
+    *, backend: StorageBackend[E], dfd_client: DfdClient, max_jobs: int = 0
 ) -> "_DefaultUploader[E]":
-    return _DefaultUploader(backend=backend, dfd_client=dfd_client)
+    return _DefaultUploader(backend=backend, dfd_client=dfd_client, max_jobs=max_jobs)
+
+
+def _make_job_context(max_jobs: int):
+    if max_jobs:
+        return asyncio.Semaphore(max_jobs)
+    return nullcontext()
 
 
 class _DefaultUploader[E]:
@@ -73,10 +80,12 @@ class _DefaultUploader[E]:
         *,
         backend: StorageBackend[E],
         dfd_client: DfdClient,
+        max_jobs: int = 0,
     ) -> None:
         self._backend = backend
         self._dfd = dfd_client
         self._jobs = set[Path | int]()
+        self._job_lock = _make_job_context(max_jobs)
 
     async def upload_from_hah(self, local_path: Path, *, remote_name: str) -> None:
         if local_path in self._jobs:
@@ -84,9 +93,12 @@ class _DefaultUploader[E]:
             return
 
         with job_guard(self._jobs, local_path):
-            await self._backend.sync()
-            entry = await self._backend.get_root_folder()
-            await self._upload_file_retry(entry, local_path, remote_name=remote_name)
+            async with self._job_lock:
+                await self._backend.sync()
+                entry = await self._backend.get_root_folder()
+                await self._upload_file_retry(
+                    entry, local_path, remote_name=remote_name
+                )
 
     async def upload_from_torrent(
         self,
@@ -101,25 +113,27 @@ class _DefaultUploader[E]:
         filters = await self._dfd.fetch_filters()
 
         with job_guard(self._jobs, torrent_id):
-            await self._backend.sync()
+            async with self._job_lock:
+                await self._backend.sync()
 
-            entry = await self._backend.get_root_folder()
+                entry = await self._backend.get_root_folder()
 
-            src_list = (Path(torrent_root, _) for _ in root_items)
+                src_list = (Path(torrent_root, _) for _ in root_items)
 
-            with compress_context() as compress_avif:
-                pending_list = as_completed((compress_avif(_) for _ in src_list))
+                with compress_context() as compress_avif:
+                    pending_list = as_completed((compress_avif(_) for _ in src_list))
 
-                async_list = (await _ for _ in pending_list)
+                    async_list = (await _ for _ in pending_list)
 
-                async for item in async_list:
-                    await self._upload(entry, item, filters=filters)
+                    async for item in async_list:
+                        await self._upload(entry, item, filters=filters)
 
     async def upload_from_path(self, local_path: Path) -> None:
         with job_guard(self._jobs, local_path):
-            await self._backend.sync()
-            entry = await self._backend.get_root_folder()
-            await self._upload(entry, local_path, filters=[])
+            async with self._job_lock:
+                await self._backend.sync()
+                entry = await self._backend.get_root_folder()
+                await self._upload(entry, local_path, filters=[])
 
     async def _upload(self, entry: E, local_path: Path, *, filters: FilterList) -> None:
         if should_exclude(local_path.name, filters):
