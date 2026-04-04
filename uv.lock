@@ -202,7 +202,7 @@ requires-dist = [
     { name = "wcpan-drive-crypt", specifier = ">=5.0.1,<6.0.0" },
     { name = "wcpan-drive-google", specifier = ">=10.0.1,<11.0.0" },
     { name = "wcpan-drive-sqlite", specifier = ">=3.0.0,<4.0.0" },
-    { name = "wcpan-drive-synology", specifier = "==2.0.0a4" },
+    { name = "wcpan-drive-synology", specifier = "==2.0.0a5" },
     { name = "wcpan-logging", specifier = ">=2.0.2,<3.0.0" },
 ]
 
@@ -729,16 +729,16 @@ wheels = [
 
 [[package]]
 name = "wcpan-drive-synology"
-version = "2.0.0a4"
+version = "2.0.0a5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
     { name = "pycryptodome" },
     { name = "wcpan-drive-core" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/01/a7/354e8e8a552cbb18726e65aa2d95f24dd433a1690d889a7fa592f2005d7e/wcpan_drive_synology-2.0.0a4.tar.gz", hash = "sha256:fecc8a7f282294208ee7a9a7e630b5a0c7783434ee375dbc05b099ac781f46d1", size = 88088, upload-time = "2026-04-03T17:08:14.309Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/29/29/86378a72753af26f24f50d9b926c636a6517af1b080b40f91411a65b7d33/wcpan_drive_synology-2.0.0a5.tar.gz", hash = "sha256:718ce18465738e999d3dedd60e104e76ce96546f7f0fc73393cca72e76a4bc9d", size = 88366, upload-time = "2026-04-04T06:19:26.349Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bb/69/3ced75ae209e703755577f2e94dc3e9054fcf61593e02d89194cdcd1c1c7/wcpan_drive_synology-2.0.0a4-py3-none-any.whl", hash = "sha256:024b3901f186f0d80005d463d1118d84019069f76d23d4ad972b4b29440ea7db", size = 40291, upload-time = "2026-04-03T17:08:12.124Z" },
+    { url = "https://files.pythonhosted.org/packages/1d/46/7721f62bf5e0903e48347d087fedb1fb7e68d2b34b23be5cc4b41b2c9e99/wcpan_drive_synology-2.0.0a5-py3-none-any.whl", hash = "sha256:81dc09289fe2ff31239bc7826af34819b2f07ec3dd46cb4563d7447ac8825895", size = 40618, upload-time = "2026-04-04T06:19:27.781Z" },
 ]
 
 [[package]]
