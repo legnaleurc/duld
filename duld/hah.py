@@ -15,6 +15,7 @@ from .upload import Uploader
 _L = logging.getLogger(__name__)
 
 _META_FILE_NAME = "galleryinfo.txt"
+_LINUX_NAME_MAX = 255
 
 
 async def watch_finished_hah(
@@ -89,6 +90,9 @@ def _get_names_for_upload(src_path: Path, dst_path: Path) -> tuple[str, str]:
         compress_base_name = _get_gid_from_name(src_path.name)
         return compress_base_name, remote_name
 
+    if len(remote_name.encode("utf-8")) > _LINUX_NAME_MAX:
+        remote_name = _shorten_remote_name(src_path, remote_name)
+
     return compress_base_name, remote_name
 
 
@@ -115,8 +119,34 @@ def _read_title_from_meta(gallery_path: Path) -> str:
 
 
 def _get_gid_from_name(name: str) -> str:
-    rv = re.match(r"[(\d+)]$", name)
+    rv = re.search(r"\[(\d+)\]$", name)
     if rv is None:
         raise ValueError(f"unexpected name: {name}")
-    gid = rv.group(1)
-    return gid
+    return rv.group(1)
+
+
+def _shorten_remote_name(src_path: Path, original: str) -> str:
+    _L.warning(f"remote name too long, will shorten: {original!r}")
+    suffix = ".7z"
+    try:
+        gid = _get_gid_from_name(src_path.name)
+        gid_part = f" [{gid}]{suffix}"
+        title = _read_title_from_meta(src_path)
+        candidate = f"{title}{gid_part}"
+        if len(candidate.encode("utf-8")) <= _LINUX_NAME_MAX:
+            return candidate
+        max_title_bytes = _LINUX_NAME_MAX - len(gid_part.encode("utf-8"))
+        title = (
+            title.encode("utf-8")[:max_title_bytes]
+            .decode("utf-8", errors="ignore")
+            .rstrip()
+        )
+        return f"{title}{gid_part}"
+    except Exception:
+        _L.exception("could not build shortened name, falling back to gid-only")
+    try:
+        return f"{_get_gid_from_name(src_path.name)}{suffix}"
+    except Exception:
+        return original.encode("utf-8")[:_LINUX_NAME_MAX].decode(
+            "utf-8", errors="ignore"
+        )
