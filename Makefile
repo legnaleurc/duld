@@ -24,6 +24,7 @@ purge:
 
 test: venv
 	$(PYTHON) -m compileall duld
+	$(PYTHON) -m unittest discover -s tests -t .
 
 venv: $(ENV_LOCK)
 
