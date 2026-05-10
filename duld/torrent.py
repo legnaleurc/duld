@@ -135,11 +135,11 @@ def _connect_transmission(transmission: TransmissionData) -> Client:
 async def watch_disk_space(
     *, transmission: TransmissionData, disk_space: DiskSpaceData
 ):
-    halted = False
+    halted_ids: list[int] = []
     while True:
         await asyncio.sleep(60)
         try:
-            halted = _check_disk_space(transmission, disk_space, halted)
+            halted_ids = _check_disk_space(transmission, disk_space, halted_ids)
         except TransmissionError as e:
             _L.error(f"transmission error {e}. data: {transmission}")
         except Exception:
@@ -147,8 +147,8 @@ async def watch_disk_space(
 
 
 def _check_disk_space(
-    transmission: TransmissionData, disk_space: DiskSpaceData, halted: bool
-) -> bool:
+    transmission: TransmissionData, disk_space: DiskSpaceData, halted_ids: list[int]
+) -> list[int]:
     if disk_space.safe <= disk_space.danger:
         raise ValueError("invalid disk space range")
 
@@ -158,35 +158,34 @@ def _check_disk_space(
     free_space = torrent_client.free_space(download_dir)
     if free_space is None:
         _L.warning("cannot get free space")
-        return halted
+        return halted_ids
     free_space_in_gb = free_space / 1024 / 1024 / 1024
 
     if free_space_in_gb >= disk_space.safe:
-        if halted:
+        if halted_ids:
             _L.info(f"resuming halted torrents: {free_space_in_gb}")
-            _resume_halted_torrents(torrent_client)
-        return False
+            _resume_halted_torrents(torrent_client, halted_ids)
+        return []
 
     if free_space_in_gb <= disk_space.danger:
-        if not halted:
+        if not halted_ids:
             _L.info(f"halting queued torrents: {free_space_in_gb}")
-            _halt_pending_torrents(torrent_client)
-        return True
+            halted_ids = _halt_pending_torrents(torrent_client)
+        return halted_ids
 
-    return halted
+    return halted_ids
 
 
-def _halt_pending_torrents(client: Client) -> None:
+def _halt_pending_torrents(client: Client) -> list[int]:
     torrents = client.get_torrents()
     torrent_id_list = [
         t.id for t in torrents if t.status == "downloading" and t.downloaded_ever == 0
     ]
-    client.stop_torrent(torrent_id_list)  # type: ignore
+    if torrent_id_list:
+        client.stop_torrent(torrent_id_list)  # type: ignore
+    return torrent_id_list
 
 
-def _resume_halted_torrents(client: Client) -> None:
-    torrents = client.get_torrents()
-    torrent_id_list = [
-        t.id for t in torrents if t.status == "stopped" and t.downloaded_ever == 0
-    ]
-    client.start_torrent(torrent_id_list)  # type: ignore
+def _resume_halted_torrents(client: Client, torrent_id_list: list[int]) -> None:
+    if torrent_id_list:
+        client.start_torrent(torrent_id_list)  # type: ignore
