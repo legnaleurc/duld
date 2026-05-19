@@ -18,6 +18,10 @@ class UploadError(Exception):
     pass
 
 
+class HashError(UploadError):
+    pass
+
+
 class StorageBackend[E](metaclass=ABCMeta):
     @abstractmethod
     async def get_root_folder(self) -> E: ...
@@ -182,6 +186,8 @@ class _DefaultUploader[E]:
             try:
                 await self._upload_file(entry, local_path, remote_name=remote_name)
                 return
+            except HashError:
+                raise
             except Exception:
                 _L.exception("retry upload file")
             await self._backend.sync()

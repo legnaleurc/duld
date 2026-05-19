@@ -17,7 +17,7 @@ from wcpan.drive.core.lib import dispatch_change, upload_file_from_local
 from wcpan.drive.core.types import Drive, Node
 
 from ..settings import UploadData
-from ._core import StorageBackend, UploadError
+from ._core import HashError, StorageBackend, UploadError
 
 
 _L = logging.getLogger(__name__)
@@ -74,12 +74,12 @@ class DriveBackend(StorageBackend[Node]):
         self, local_path: Path, entry: Node, remote_path: PurePath
     ) -> None:
         if not entry.hash:
-            raise UploadError(f"{remote_path} has invalid hash")
+            raise HashError(f"{remote_path} has invalid hash")
         local_hash = await get_file_hash(
             local_path, drive=self._drive, pool=self._pool, node=entry
         )
         if local_hash != entry.hash:
-            raise UploadError(
+            raise HashError(
                 f"(remote) {remote_path} has a different hash ({local_hash}, {entry.hash})"
             )
 

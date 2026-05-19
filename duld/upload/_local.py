@@ -3,7 +3,7 @@ from pathlib import Path, PurePath
 from typing import override
 
 from ..settings import UploadData
-from ._core import StorageBackend, UploadError
+from ._core import HashError, StorageBackend, UploadError
 
 
 class LocalBackend(StorageBackend[Path]):
@@ -38,7 +38,7 @@ class LocalBackend(StorageBackend[Path]):
         local_size = local_path.stat().st_size
         remote_size = entry.stat().st_size
         if local_size != remote_size:
-            raise UploadError(
+            raise HashError(
                 f"{remote_path} size mismatch: local={local_size}, remote={remote_size}"
             )
 
