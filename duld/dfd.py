@@ -2,20 +2,14 @@ import re
 from abc import ABCMeta, abstractmethod
 from collections.abc import Iterable
 from contextlib import asynccontextmanager
-from typing import TypedDict, override
+from typing import override
 
-from aiohttp import ClientSession
-
+from .filters import FilterStore, create_filter_store
 from .settings import ExcludeData
 
 
 type _Filter = re.Pattern[str]
 type FilterList = list[_Filter]
-
-
-class _FilterData(TypedDict):
-    id: int
-    regexp: str
 
 
 class DfdClient(metaclass=ABCMeta):
@@ -33,10 +27,8 @@ async def create_dfd_client(exclude_data: ExcludeData | None):
     if not exclude_data.dynamic:
         yield _StaticDfdClient(static=static)
         return
-    async with ClientSession() as session:
-        yield _DefaultDfdClient(
-            static=static, dynamic=exclude_data.dynamic, session=session
-        )
+    store = create_filter_store(exclude_data.dynamic)
+    yield _DefaultDfdClient(static=static, store=store)
 
 
 def should_exclude(name: str, exclude_list: FilterList) -> bool:
@@ -53,19 +45,13 @@ class _StaticDfdClient(DfdClient):
 
 
 class _DefaultDfdClient(DfdClient):
-    def __init__(
-        self, *, static: FilterList, dynamic: str, session: ClientSession
-    ) -> None:
+    def __init__(self, *, static: FilterList, store: FilterStore) -> None:
         self._const = static
-        self._url = dynamic
-        self._curl = session
+        self._store = store
 
     @override
     async def fetch_filters(self) -> FilterList:
-        async with self._curl.get(self._url) as response:
-            response.raise_for_status()
-            filters: list[_FilterData] = await response.json()
-        rv = _to_regex_list(_["regexp"] for _ in filters)
+        rv = _to_regex_list(self._store.regexps())
         return self._const + rv
 
 

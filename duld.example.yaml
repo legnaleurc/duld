@@ -15,8 +15,8 @@ exclude:
   # (optional) static filters in regexp
   static:
     - ^.*$
-  # (optional) dynamic filters from dfd
-  dynamic: http://dfd/api/v1/filters
+  # (optional) dynamic exclude state database path
+  dynamic: /mnt/duld.sqlite
 # daemon log file path, or null to output to stderr
 log_path: /tmp/duld.log
 # (optional) transmission RPC settings

@@ -9,9 +9,10 @@ from pathlib import Path
 from aiohttp.web import Application, AppRunner, TCPSite
 from wcpan.logging import ConfigBuilder
 
-from .api import HaHHandler, LinksHandler, TorrentsHandler
+from .api import FiltersHandler, HaHHandler, LinksHandler, TorrentsHandler
+from .filters import create_filter_store
 from .hah import watch_finished_hah
-from .keys import CONTEXT, SCHEDULER, UPLOADER
+from .keys import CONTEXT, FILTER_STORE, SCHEDULER, UPLOADER
 from .settings import load_from_path
 from .torrent import watch_disk_space
 from .upload import create_uploader
@@ -60,9 +61,14 @@ class Daemon:
         if self._cfg.hah_path:
             app.router.add_view(r"/api/v1/hah", HaHHandler)
         app.router.add_view(r"/api/v1/links", LinksHandler)
+        if self._cfg.exclude and self._cfg.exclude.dynamic:
+            app.router.add_view(r"/api/v1/filters", FiltersHandler)
+            app.router.add_view(r"/api/v1/filters/{filter_id:\d+}", FiltersHandler)
 
         async with AsyncExitStack() as stack:
             app[CONTEXT] = self._cfg
+            if self._cfg.exclude and self._cfg.exclude.dynamic:
+                app[FILTER_STORE] = create_filter_store(self._cfg.exclude.dynamic)
 
             group = await stack.enter_async_context(TaskGroup())
             app[SCHEDULER] = group

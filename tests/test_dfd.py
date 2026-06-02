@@ -1,6 +1,9 @@
 import unittest
+from tempfile import TemporaryDirectory
 
-from duld.dfd import _to_pattern, _to_regex_list, should_exclude
+from duld.dfd import _to_pattern, _to_regex_list, create_dfd_client, should_exclude
+from duld.filters import create_filter_store
+from duld.settings import ExcludeData
 
 
 class TestToPattern(unittest.TestCase):
@@ -63,3 +66,34 @@ class TestShouldExclude(unittest.TestCase):
 
     def test_match_is_case_insensitive(self):
         self.assertTrue(should_exclude("SAMPLE_FILE", self.filters))
+
+
+class TestCreateDfdClient(unittest.IsolatedAsyncioTestCase):
+    async def test_local_dynamic_filters_are_combined_with_static_filters(self):
+        with TemporaryDirectory() as tmp:
+            dynamic = f"{tmp}/duld.sqlite3"
+            store = create_filter_store(dynamic)
+            store.create("dynamic")
+
+            async with create_dfd_client(
+                ExcludeData(static=["static"], dynamic=dynamic)
+            ) as client:
+                filters = await client.fetch_filters()
+
+        self.assertTrue(should_exclude("static_file", filters))
+        self.assertTrue(should_exclude("dynamic_file", filters))
+
+    async def test_invalid_stored_regexps_are_ignored(self):
+        with TemporaryDirectory() as tmp:
+            dynamic = f"{tmp}/duld.sqlite3"
+            store = create_filter_store(dynamic)
+            store.create("(invalid")
+            store.create("valid")
+
+            async with create_dfd_client(
+                ExcludeData(static=None, dynamic=dynamic)
+            ) as client:
+                filters = await client.fetch_filters()
+
+        self.assertEqual(len(filters), 1)
+        self.assertTrue(should_exclude("valid_file", filters))

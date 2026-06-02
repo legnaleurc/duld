@@ -30,10 +30,15 @@ python3 -m duld --settings=duld.yaml
 ```shell
 # prepare .env first
 cp .env.example .env
+# create the host database file used by DULD_DB_FILE
+touch /path/to/duld.sqlite
 
 docker compose build
 docker compose up
 ```
+
+Set `exclude.dynamic` in your config to `/mnt/duld.sqlite` when using Docker
+Compose. The host database file is mounted through `DULD_DB_FILE`.
 
 ## RESTful API
 
@@ -49,3 +54,45 @@ Upload torrent by ID.
 
 204 - success
 400 - invalid torrent ID
+
+### GET /filters
+
+List dynamic exclude filters.
+
+200 - a list of filters, in JSON
+
+### POST /filters
+
+Create a dynamic exclude filter.
+
+Request body:
+
+```json
+{"regexp": "^sample"}
+```
+
+200 - created filter, in JSON
+400 - invalid regexp value
+409 - regexp already exists
+
+### PUT /filters/{ID}
+
+Update a dynamic exclude filter by ID.
+
+Request body:
+
+```json
+{"regexp": "^sample"}
+```
+
+200 - updated filter, in JSON
+400 - invalid regexp value
+404 - filter not found
+409 - regexp already exists
+
+### DELETE /filters/{ID}
+
+Delete a dynamic exclude filter by ID.
+
+204 - success
+404 - filter not found

@@ -4,10 +4,16 @@ from pathlib import Path
 from typing import NotRequired, TypedDict
 
 from aiohttp.web import Response, View
-from aiohttp.web_exceptions import HTTPBadRequest, HTTPInternalServerError
+from aiohttp.web_exceptions import (
+    HTTPBadRequest,
+    HTTPConflict,
+    HTTPInternalServerError,
+    HTTPNotFound,
+)
 
+from .filters import DuplicateFilterError, FilterNotFoundError
 from .hah import upload_finished_hah
-from .keys import CONTEXT, SCHEDULER, UPLOADER
+from .keys import CONTEXT, FILTER_STORE, SCHEDULER, UPLOADER
 from .links import upload_from_url
 from .torrent import add_urls, get_completed, upload_by_id
 
@@ -139,6 +145,66 @@ class LinksHandler(View):
         uploader = self.request.app[UPLOADER]
         group.create_task(upload_from_url(url, name, uploader=uploader))
         return Response(status=204)
+
+
+class FilterData(TypedDict):
+    regexp: str
+
+
+class FiltersHandler(View):
+    async def get(self):
+        store = self.request.app[FILTER_STORE]
+        return _json_response([_.to_dict() for _ in store.list()])
+
+    async def post(self):
+        regexp = await self._read_regexp()
+        store = self.request.app[FILTER_STORE]
+        try:
+            created = store.create(regexp)
+        except DuplicateFilterError:
+            raise HTTPConflict
+        return _json_response(created.to_dict())
+
+    async def put(self):
+        id_ = self._read_id()
+        regexp = await self._read_regexp()
+        store = self.request.app[FILTER_STORE]
+        try:
+            updated = store.update(id_, regexp)
+        except DuplicateFilterError:
+            raise HTTPConflict
+        except FilterNotFoundError:
+            raise HTTPNotFound
+        return _json_response(updated.to_dict())
+
+    async def delete(self):
+        id_ = self._read_id()
+        store = self.request.app[FILTER_STORE]
+        try:
+            store.delete(id_)
+        except FilterNotFoundError:
+            raise HTTPNotFound
+        return Response(status=204)
+
+    def _read_id(self) -> int:
+        id_ = self.request.match_info["filter_id"]
+        if not id_:
+            raise HTTPBadRequest
+        return int(id_)
+
+    async def _read_regexp(self) -> str:
+        data: FilterData = await self.request.json()
+        if not data:
+            raise HTTPBadRequest
+        try:
+            regexp = data["regexp"]
+        except KeyError:
+            raise HTTPBadRequest
+        if not isinstance(regexp, str):
+            raise HTTPBadRequest
+        if not regexp:
+            raise HTTPBadRequest
+        return regexp
 
 
 def _json_response(data: object) -> Response:
