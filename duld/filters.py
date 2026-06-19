@@ -45,9 +45,7 @@ class FilterStore:
 
     def list(self) -> list[FilterData]:
         with closing(self._connect()) as conn:
-            rows = conn.execute(
-                "SELECT id, regexp FROM filters ORDER BY id"
-            ).fetchall()
+            rows = conn.execute("SELECT id, regexp FROM filters ORDER BY id").fetchall()
         return [_to_filter_data(_) for _ in rows]
 
     def create(self, regexp: str) -> FilterData:

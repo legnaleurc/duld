@@ -130,17 +130,13 @@ class TestFiltersApi(AioHTTPTestCase):
     async def test_update_filter(self):
         await self.client.post("/api/v1/filters", json={"regexp": "abc"})
 
-        response = await self.client.put(
-            "/api/v1/filters/1", json={"regexp": "def"}
-        )
+        response = await self.client.put("/api/v1/filters/1", json={"regexp": "def"})
 
         self.assertEqual(response.status, 200)
         self.assertEqual(await response.json(), {"id": 1, "regexp": "def"})
 
     async def test_update_missing_filter_returns_not_found(self):
-        response = await self.client.put(
-            "/api/v1/filters/1", json={"regexp": "abc"}
-        )
+        response = await self.client.put("/api/v1/filters/1", json={"regexp": "abc"})
 
         self.assertEqual(response.status, 404)
 
@@ -148,9 +144,7 @@ class TestFiltersApi(AioHTTPTestCase):
         await self.client.post("/api/v1/filters", json={"regexp": "abc"})
         await self.client.post("/api/v1/filters", json={"regexp": "def"})
 
-        response = await self.client.put(
-            "/api/v1/filters/1", json={"regexp": "def"}
-        )
+        response = await self.client.put("/api/v1/filters/1", json={"regexp": "def"})
 
         self.assertEqual(response.status, 409)
 
