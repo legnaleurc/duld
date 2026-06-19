@@ -1,7 +1,22 @@
 import unittest
 from unittest.mock import MagicMock
 
-from duld.torrent import _get_root_dir, _get_root_items, _split_all
+from duld.torrent import (
+    _get_root_dir,
+    _get_root_items,
+    _split_all,
+    schedule_upload_by_id,
+)
+
+
+class _FakeTaskManager:
+    def __init__(self, accepted: bool):
+        self.accepted = accepted
+        self.calls = []
+
+    def create_once(self, key, coro_factory):
+        self.calls.append((key, coro_factory))
+        return self.accepted
 
 
 class TestSplitAll(unittest.TestCase):
@@ -89,3 +104,35 @@ class TestGetRootDir(unittest.TestCase):
         torrent = MagicMock()
         torrent.download_dir = "/downloads"
         self.assertEqual(_get_root_dir(torrent, ""), "/downloads")
+
+
+class TestScheduleUploadById(unittest.TestCase):
+    def test_skips_duplicate_torrent_upload(self):
+        manager = _FakeTaskManager(False)
+        uploader = MagicMock()
+        transmission = MagicMock()
+
+        accepted = schedule_upload_by_id(
+            task_manager=manager,
+            uploader=uploader,
+            transmission=transmission,
+            torrent_id=123,
+        )
+
+        self.assertFalse(accepted)
+        self.assertEqual(manager.calls[0][0], ("torrent", 123))
+
+    def test_schedules_upload_with_torrent_key(self):
+        manager = _FakeTaskManager(True)
+        uploader = MagicMock()
+        transmission = MagicMock()
+
+        accepted = schedule_upload_by_id(
+            task_manager=manager,
+            uploader=uploader,
+            transmission=transmission,
+            torrent_id=123,
+        )
+
+        self.assertTrue(accepted)
+        self.assertEqual(manager.calls[0][0], ("torrent", 123))

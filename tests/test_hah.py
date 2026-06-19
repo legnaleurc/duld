@@ -9,7 +9,18 @@ from duld.hah import (
     _is_src_too_long,
     _read_title_from_meta,
     _shorten_remote_name,
+    schedule_upload_hah,
 )
+
+
+class _FakeTaskManager:
+    def __init__(self, accepted: bool):
+        self.accepted = accepted
+        self.calls = []
+
+    def create_once(self, key, coro_factory):
+        self.calls.append((key, coro_factory))
+        return self.accepted
 
 
 class TestIsSrcTooLong(unittest.TestCase):
@@ -152,3 +163,33 @@ class TestGetNamesForUpload(unittest.TestCase):
                 base, remote = _get_names_for_upload(src, dst)
             self.assertEqual(base, "99999")
             self.assertEqual(remote, f"{name}.7z")
+
+
+class TestScheduleUploadHah(unittest.TestCase):
+    def test_schedules_hah_upload_with_source_path_key(self):
+        manager = _FakeTaskManager(True)
+        uploader = object()
+        src_path = Path("/tmp/gallery")
+
+        accepted = schedule_upload_hah(
+            task_manager=manager,
+            uploader=uploader,
+            src_path=src_path,
+        )
+
+        self.assertTrue(accepted)
+        self.assertEqual(manager.calls[0][0], ("hah", src_path.resolve()))
+
+    def test_skips_duplicate_hah_upload(self):
+        manager = _FakeTaskManager(False)
+        uploader = object()
+        src_path = Path("/tmp/gallery")
+
+        accepted = schedule_upload_hah(
+            task_manager=manager,
+            uploader=uploader,
+            src_path=src_path,
+        )
+
+        self.assertFalse(accepted)
+        self.assertEqual(manager.calls[0][0], ("hah", src_path.resolve()))

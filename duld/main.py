@@ -12,8 +12,9 @@ from wcpan.logging import ConfigBuilder
 from .api import FiltersHandler, HaHHandler, LinksHandler, TorrentsHandler
 from .filters import create_filter_store
 from .hah import watch_finished_hah
-from .keys import CONTEXT, FILTER_STORE, SCHEDULER, UPLOADER
+from .keys import CONTEXT, FILTER_STORE, SCHEDULER, TASK_MANAGER, UPLOADER
 from .settings import load_from_path
+from .tasks import UploadTaskManager
 from .torrent import watch_disk_space
 from .upload import create_uploader
 
@@ -72,6 +73,8 @@ class Daemon:
 
             group = await stack.enter_async_context(TaskGroup())
             app[SCHEDULER] = group
+            task_manager = UploadTaskManager(group)
+            app[TASK_MANAGER] = task_manager
 
             uploader = await stack.enter_async_context(create_uploader(self._cfg))
             app[UPLOADER] = uploader
@@ -83,7 +86,7 @@ class Daemon:
                         watch_finished_hah(
                             hah_path=Path(self._cfg.hah_path),
                             uploader=uploader,
-                            group=group,
+                            task_manager=task_manager,
                         ),
                     )
                 )

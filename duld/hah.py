@@ -1,7 +1,6 @@
 import logging
 import re
 import shutil
-from asyncio import TaskGroup
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import cast
@@ -9,6 +8,7 @@ from typing import cast
 from asyncinotify import Event, Mask, RecursiveWatcher
 
 from .lib import compress_to_path, is_too_long_to_compress
+from .tasks import UploadTaskManager
 from .upload import Uploader
 
 
@@ -22,7 +22,7 @@ async def watch_finished_hah(
     *,
     hah_path: Path,
     uploader: Uploader,
-    group: TaskGroup,
+    task_manager: UploadTaskManager,
 ) -> None:
     download_path = hah_path / "download"
 
@@ -34,11 +34,15 @@ async def watch_finished_hah(
             continue
         if path.name == _META_FILE_NAME:
             gallery_path = path.parent
-            group.create_task(_upload(uploader, gallery_path))
+            schedule_upload_hah(
+                task_manager=task_manager,
+                uploader=uploader,
+                src_path=gallery_path,
+            )
 
 
 def upload_finished_hah(
-    *, hah_path: Path, uploader: Uploader, group: TaskGroup
+    *, hah_path: Path, uploader: Uploader, task_manager: UploadTaskManager
 ) -> list[Path]:
     download_path = hah_path / "download"
 
@@ -46,9 +50,26 @@ def upload_finished_hah(
     for candidate in download_path.iterdir():
         meta_path = candidate / _META_FILE_NAME
         if meta_path.is_file():
-            group.create_task(_upload(uploader, candidate))
+            schedule_upload_hah(
+                task_manager=task_manager,
+                uploader=uploader,
+                src_path=candidate,
+            )
             finished.append(candidate)
     return finished
+
+
+def schedule_upload_hah(
+    *,
+    task_manager: UploadTaskManager,
+    uploader: Uploader,
+    src_path: Path,
+) -> bool:
+    key = ("hah", src_path.resolve())
+    accepted = task_manager.create_once(key, lambda: _upload(uploader, src_path))
+    if not accepted:
+        _L.warning(f"{src_path} is still uploading")
+    return accepted
 
 
 async def _upload(uploader: Uploader, src_path: Path) -> None:

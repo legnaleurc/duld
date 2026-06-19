@@ -13,9 +13,9 @@ from aiohttp.web_exceptions import (
 
 from .filters import DuplicateFilterError, FilterNotFoundError
 from .hah import upload_finished_hah
-from .keys import CONTEXT, FILTER_STORE, SCHEDULER, UPLOADER
+from .keys import CONTEXT, FILTER_STORE, TASK_MANAGER, UPLOADER
 from .links import upload_from_url
-from .torrent import add_urls, get_completed, upload_by_id
+from .torrent import add_urls, get_completed, schedule_upload_by_id
 
 
 _L = logging.getLogger(__name__)
@@ -46,14 +46,13 @@ class TorrentsHandler(View):
             _L.error("invalid torrent id")
             raise HTTPBadRequest
 
-        group = self.request.app[SCHEDULER]
+        task_manager = self.request.app[TASK_MANAGER]
         uploader = self.request.app[UPLOADER]
-        group.create_task(
-            upload_by_id(
-                uploader=uploader,
-                transmission=ctx.transmission,
-                torrent_id=int(torrent_id),
-            )
+        schedule_upload_by_id(
+            task_manager=task_manager,
+            uploader=uploader,
+            transmission=ctx.transmission,
+            torrent_id=int(torrent_id),
         )
         return Response(status=204)
 
@@ -69,15 +68,14 @@ class TorrentsHandler(View):
             _L.error(f"transmission error: {e}, data: {ctx.transmission}")
             raise HTTPInternalServerError
 
-        group = self.request.app[SCHEDULER]
+        task_manager = self.request.app[TASK_MANAGER]
         uploader = self.request.app[UPLOADER]
         for t in torrents:
-            group.create_task(
-                upload_by_id(
-                    uploader=uploader,
-                    transmission=ctx.transmission,
-                    torrent_id=t.id,
-                )
+            schedule_upload_by_id(
+                task_manager=task_manager,
+                uploader=uploader,
+                transmission=ctx.transmission,
+                torrent_id=t.id,
             )
         result = [_.id for _ in torrents]
         return _json_response(result)
@@ -110,12 +108,12 @@ class HaHHandler(View):
             _L.error("no hah")
             raise HTTPInternalServerError
 
-        group = self.request.app[SCHEDULER]
+        task_manager = self.request.app[TASK_MANAGER]
         uploader = self.request.app[UPLOADER]
         folders = upload_finished_hah(
             hah_path=Path(ctx.hah_path),
             uploader=uploader,
-            group=group,
+            task_manager=task_manager,
         )
         finished = [folder.name for folder in folders]
         return _json_response(finished)
@@ -141,9 +139,9 @@ class LinksHandler(View):
         if not url:
             raise HTTPBadRequest
 
-        group = self.request.app[SCHEDULER]
+        task_manager = self.request.app[TASK_MANAGER]
         uploader = self.request.app[UPLOADER]
-        group.create_task(upload_from_url(url, name, uploader=uploader))
+        task_manager.create(upload_from_url(url, name, uploader=uploader))
         return Response(status=204)
 
 

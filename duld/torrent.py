@@ -5,10 +5,31 @@ import os.path
 from transmission_rpc import Client, Torrent, TransmissionError
 
 from .settings import DiskSpaceData, TransmissionData
+from .tasks import UploadTaskManager
 from .upload import Uploader
 
 
 _L = logging.getLogger(__name__)
+
+
+def schedule_upload_by_id(
+    *,
+    task_manager: UploadTaskManager,
+    uploader: Uploader,
+    transmission: TransmissionData,
+    torrent_id: int,
+) -> bool:
+    accepted = task_manager.create_once(
+        ("torrent", torrent_id),
+        lambda: upload_by_id(
+            uploader=uploader,
+            transmission=transmission,
+            torrent_id=torrent_id,
+        ),
+    )
+    if not accepted:
+        _L.warning(f"{torrent_id} is still uploading")
+    return accepted
 
 
 async def upload_by_id(
