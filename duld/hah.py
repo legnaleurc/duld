@@ -105,11 +105,8 @@ def _get_names_for_upload(src_path: Path, dst_path: Path) -> tuple[str, str]:
 
     if _is_src_too_long(src_path.name):
         remote_name = _get_long_remote_name(src_path)
-        return compress_base_name, remote_name
-
-    if is_too_long_to_compress(dst_path, src_path.name):
+    elif is_too_long_to_compress(dst_path, src_path.name):
         compress_base_name = _get_gid_from_name(src_path.name)
-        return compress_base_name, remote_name
 
     if len(remote_name.encode("utf-8")) > _LINUX_NAME_MAX:
         remote_name = _shorten_remote_name(src_path, remote_name)
@@ -150,7 +147,11 @@ def _shorten_remote_name(src_path: Path, original: str) -> str:
     _L.warning(f"remote name too long, will shorten: {original!r}")
     suffix = ".7z"
     try:
-        gid = _get_gid_from_name(src_path.name)
+        gid = (
+            src_path.name
+            if _is_src_too_long(src_path.name)
+            else _get_gid_from_name(src_path.name)
+        )
         gid_part = f" [{gid}]{suffix}"
         title = _read_title_from_meta(src_path)
         candidate = f"{title}{gid_part}"

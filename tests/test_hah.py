@@ -152,6 +152,18 @@ class TestGetNamesForUpload(unittest.TestCase):
             self.assertEqual(base, "1234567")
             self.assertEqual(remote, "My Gallery [1234567].7z")
 
+    def test_numeric_name_with_long_metadata_title_is_shortened(self):
+        with TemporaryDirectory() as tmp:
+            src = self._make_gallery(Path(tmp), "7777777", "あ" * 100)
+            dst = Path(tmp) / "dst"
+            dst.mkdir()
+
+            base, remote = _get_names_for_upload(src, dst)
+
+            self.assertEqual(base, "7777777")
+            self.assertLessEqual(len(remote.encode("utf-8")), 255)
+            self.assertTrue(remote.endswith(" [7777777].7z"))
+
     def test_compress_name_too_long_uses_gid_as_base(self):
         with TemporaryDirectory() as tmp:
             name = "A" * 200 + " [99999]"

@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 from abc import ABCMeta, abstractmethod
 from asyncio import as_completed
 from contextlib import contextmanager, nullcontext
@@ -11,6 +12,7 @@ from ..processors import compress_context
 
 
 RETRY_TIMES = 3
+REMOTE_NAME_MAX_BYTES = 255
 _L = logging.getLogger(__name__)
 
 
@@ -20,6 +22,22 @@ class UploadError(Exception):
 
 class HashError(UploadError):
     pass
+
+
+def _shorten_file_name(name: str, max_bytes: int = REMOTE_NAME_MAX_BYTES) -> str:
+    """Shorten a UTF-8 file name while preserving its final suffix."""
+    if len(name.encode("utf-8")) <= max_bytes:
+        return name
+    suffix = Path(name).suffix
+    stem = name[: -len(suffix)] if suffix else name
+    match = re.search(r"( \[\d+\])$", stem)
+    preserved_tail = match.group(1) if match else ""
+    title = stem[: -len(preserved_tail)] if preserved_tail else stem
+    tail = f"{preserved_tail}{suffix}"
+    shortened_stem = title.encode("utf-8")[
+        : max_bytes - len(tail.encode("utf-8"))
+    ].decode("utf-8", errors="ignore")
+    return f"{shortened_stem.rstrip()}{tail}"
 
 
 class StorageBackend[E](metaclass=ABCMeta):
@@ -168,13 +186,26 @@ class _DefaultUploader[E]:
     async def _upload_file_retry(
         self, entry: E, local_path: Path, *, remote_name: str
     ) -> None:
+        current_remote_name = remote_name
         for _ in range(RETRY_TIMES):
             try:
-                await self._upload_file(entry, local_path, remote_name=remote_name)
+                await self._upload_file(
+                    entry, local_path, remote_name=current_remote_name
+                )
                 return
             except HashError:
                 raise
             except Exception as e:
+                if getattr(e, "reason", None) == "name_too_long":
+                    shortened = _shorten_file_name(current_remote_name)
+                    if shortened == current_remote_name:
+                        raise
+                    _L.warning(
+                        "remote name rejected as too long; retrying as %r",
+                        shortened,
+                    )
+                    current_remote_name = shortened
+                    continue
                 if not getattr(e, "retryable", True):
                     raise
                 _L.exception("retry upload file")
