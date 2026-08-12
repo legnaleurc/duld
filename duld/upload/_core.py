@@ -174,7 +174,9 @@ class _DefaultUploader[E]:
                 return
             except HashError:
                 raise
-            except Exception:
+            except Exception as e:
+                if not getattr(e, "retryable", True):
+                    raise
                 _L.exception("retry upload file")
             await self._backend.sync()
         raise UploadError(f"tried upload {RETRY_TIMES} times")
