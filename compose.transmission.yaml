@@ -1,0 +1,9 @@
+services:
+  duld:
+    volumes:
+      - type: bind
+        source: ${DULD_TM_PATH}
+        target: /mnt/tm
+        read_only: true
+        bind:
+          create_host_path: false

@@ -28,17 +28,30 @@ python3 -m duld --settings=duld.yaml
 ## Use Docker Compose
 
 ```shell
-# prepare .env first
+# prepare .env first, including COMPOSE_FILE
 cp .env.example .env
-# create the host database file used by DULD_DB_FILE
-touch /path/to/duld.sqlite
 
 docker compose build
 docker compose up
 ```
 
-Set `exclude.dynamic` in your config to `/mnt/duld.sqlite` when using Docker
-Compose. The host database file is mounted through `DULD_DB_FILE`.
+Compose files are split by feature. Select them with `COMPOSE_FILE` in `.env`:
+
+| File | Required when | Mount | Config value |
+|---|---|---|---|
+| `compose.yaml` | always | `DULD_CONFIG_FILE` | - |
+| `compose.drive.yaml` | `upload.type: drive` | drive file, config and data dirs | - |
+| `compose.local.yaml` | `upload.type: local` | `DULD_LOCAL_PATH` → `/mnt/local` | `upload_to: /mnt/local` |
+| `compose.transmission.yaml` | `transmission` is set | `DULD_TM_PATH` → `/mnt/tm` (ro) | `transmission.download_dir: /mnt/tm` |
+| `compose.hah.yaml` | `hah_path` is set | `DULD_HAH_PATH` → `/mnt/hah` | `hah_path: /mnt/hah` |
+| `compose.exclude.yaml` | `exclude.dynamic` is set | `DULD_DB_PATH` → `/mnt/db` | `exclude.dynamic: /mnt/db/duld.sqlite` |
+
+Host paths are never created automatically; every mounted path must exist
+before running Docker Compose.
+
+`exclude.dynamic` can also point into any other read-write mount, such as
+`/mnt/data/duld.sqlite` with the drive backend, in which case
+`compose.exclude.yaml` is not needed.
 
 ## RESTful API
 

@@ -1,0 +1,8 @@
+services:
+  duld:
+    volumes:
+      - type: bind
+        source: ${DULD_HAH_PATH}
+        target: /mnt/hah
+        bind:
+          create_host_path: false

@@ -16,7 +16,7 @@ exclude:
   static:
     - ^.*$
   # (optional) dynamic exclude state database path
-  dynamic: /mnt/duld.sqlite
+  dynamic: /mnt/db/duld.sqlite
 # daemon log file path, or null to output to stderr
 log_path: /tmp/duld.log
 # (optional) transmission RPC settings

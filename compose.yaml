@@ -15,22 +15,6 @@ services:
         read_only: true
         bind:
           create_host_path: false
-      - type: bind
-        source: ${DULD_DB_FILE}
-        target: /mnt/duld.sqlite
-        bind:
-          create_host_path: false
-      - type: bind
-        source: ${DULD_TM_PATH:-/tmp}
-        target: /mnt/tm
-        read_only: true
-        bind:
-          create_host_path: false
-      - type: bind
-        source: ${DULD_HAH_PATH:-/tmp}
-        target: /mnt/hah
-        bind:
-          create_host_path: false
     ports:
       - "${DULD_HOST}:${DULD_PORT}:80"
     logging:

@@ -1,0 +1,8 @@
+services:
+  duld:
+    volumes:
+      - type: bind
+        source: ${DULD_DB_PATH}
+        target: /mnt/db
+        bind:
+          create_host_path: false
