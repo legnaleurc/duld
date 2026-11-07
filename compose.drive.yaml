@@ -1,6 +1,20 @@
 services:
   duld:
     volumes:
-      - ${DULD_DRIVE_FILE}:/mnt/drive.yaml:ro
-      - ${DULD_DRIVE_CONFIG_PATH}:/mnt/config:ro
-      - ${DULD_DRIVE_DATA_PATH}:/mnt/data:rw
+      - type: bind
+        source: ${DULD_DRIVE_FILE}
+        target: /mnt/drive.yaml
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${DULD_DRIVE_CONFIG_PATH}
+        target: /mnt/config
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${DULD_DRIVE_DATA_PATH}
+        target: /mnt/data
+        bind:
+          create_host_path: false

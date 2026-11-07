@@ -3,12 +3,34 @@ services:
     build:
       target: production
     volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - /etc/timezone:/etc/timezone:ro
-      - ${DULD_CONFIG_FILE}:/mnt/duld.yaml:ro
-      - ${DULD_DB_FILE}:/mnt/duld.sqlite:rw
-      - ${DULD_TM_PATH:-/tmp}:/mnt/tm:ro
-      - ${DULD_HAH_PATH:-/tmp}:/mnt/hah:rw
+      - type: bind
+        source: /etc/localtime
+        target: /etc/localtime
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${DULD_CONFIG_FILE}
+        target: /mnt/duld.yaml
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${DULD_DB_FILE}
+        target: /mnt/duld.sqlite
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${DULD_TM_PATH:-/tmp}
+        target: /mnt/tm
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${DULD_HAH_PATH:-/tmp}
+        target: /mnt/hah
+        bind:
+          create_host_path: false
     ports:
       - "${DULD_HOST}:${DULD_PORT}:80"
     logging:

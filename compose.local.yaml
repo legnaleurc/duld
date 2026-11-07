@@ -1,4 +1,8 @@
 services:
   duld:
     volumes:
-      - ${DULD_LOCAL_PATH}:/mnt/local:rw
+      - type: bind
+        source: ${DULD_LOCAL_PATH}
+        target: /mnt/local
+        bind:
+          create_host_path: false
